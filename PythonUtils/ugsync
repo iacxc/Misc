@@ -1,0 +1,70 @@
+#!/usr/bin/python -O
+
+
+import sys
+import ldap
+import pypyodbc
+from datetime import datetime
+
+#from optparse import OptionParser
+#from Ldap import LdapWrapper
+
+#parser = OptionParser()
+#parser.add_option("--host", default="ldap-master.core.hp.com") # HPE
+#parser.add_option("--ldaps", action="store_true", default=False)
+#parser.add_option("-b", "--basedn", default="o=hp.com")
+
+#opts, args = parser.parse_args()
+#if opts.basedn is None:
+#    print "basedn cannot be empty"
+#    sys.exit(1)
+#
+#lw = LdapWrapper(opts.host, opts.ldaps)
+
+
+#print all users
+#base_dn = "ou=People," + opts.basedn
+#fields = ["create_time",
+#          "update_time",
+#          "added_by_id",
+#          "upd_by_id",
+#          "user_name",
+#          "descr",
+#          "status",
+#          "is_visible"]
+#print "insert into x_user(%s) values (?,?,?,?,?,?,?,?)" % ",".join(fields)
+#for dn, entry in lw.search(base_dn, search_scope=ldap.SCOPE_ONELEVEL,
+#                           search_filter="(uid=*)"):
+#    uid = entry["uid"][0]
+#    now = datetime.utcnow()
+#    print [now, now, 1, 1, uid, "LDAP user", 0, 1]
+
+
+conn_info = {"Driver"   : "MySQL_cygwin",
+             "Server"   : "adl02",
+             "Database" : "ranger",
+             "UID"      : "rangeradmin",
+             "PWD"      : "ranger"}
+connstr = ";".join("%s=%s" % (k,v) for k,v in conn_info.items())
+
+conn = pypyodbc.connect(connstr)
+cursor = conn.cursor()
+
+fields = ["create_time",
+          "update_time",
+          "added_by_id",
+          "upd_by_id",
+          "group_name",
+          "p_group_id",
+          "user_id" ]
+sqlstr = "insert into x_group_users(%s) values (?,?,?,?,?,?,?)" % ",".join(fields)
+values = []
+for i in range(40,41):
+    now = datetime.utcnow()
+    values.append((now, now, 2, 2, "seaquest",18,i))
+
+print sqlstr
+print values
+
+cursor.executemany(sqlstr, values)
+cursor.commit()
