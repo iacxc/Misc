@@ -4,15 +4,11 @@
 
 import sys
 import xml.etree.ElementTree as ElementTree
-import re
-    
+
 from Node import *
 
-def remove_ns(tag):
-    return re.sub(r'{.*}', '', tag)
 
-    
-class Workflow(object):
+class Workflow(Node):
     type = 'workflow-app'
     def __init__(self, filename="workflow.xml"):
         self.name = None
@@ -32,7 +28,7 @@ class Workflow(object):
         self.name = xmlroot.get('name')
 
         for elem in xmlroot:
-            elem_type = remove_ns(elem.tag)
+            elem_type = self.remove_ns(elem.tag)
             klass = {'start' : Start,
                      'end'   : End,
                      'kill'  : Kill,

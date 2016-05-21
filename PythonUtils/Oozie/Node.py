@@ -2,8 +2,6 @@
 
 import re
 
-def remove_ns(tag):
-    return re.sub(r'{.*}', '', tag)
 
 class Node(object):
     def __init__(self, root):
@@ -13,11 +11,16 @@ class Node(object):
         else:
             self.ns = None
 
+    @staticmethod
+    def remove_ns(tag):
+        return re.sub(r'{.*}', '', tag)
+
+
     def findelem(self, root, tag):
         return root.find('{{{0}}}{1}'.format(self.ns, tag))
 
 
-    def dump(self, fs, indent=''):
+    def dump(self, fs, indent):
         pass
         
         
@@ -143,7 +146,7 @@ class Shell(Node):
         self.args = []
         self.config = None
         for elem in root:
-            elem_type = remove_ns(elem.tag)
+            elem_type = self.remove_ns(elem.tag)
             if elem_type == 'job-tracker':
                 self.jobtracker = elem.text.strip()
             elif elem_type == 'name-node':
@@ -188,7 +191,7 @@ class Action(Node):
         self.name = root.get('name')
 
         for elem in root:
-            elem_type = remove_ns(elem.tag)
+            elem_type = self.remove_ns(elem.tag)
             if elem_type == 'ok':
                 self.ok = elem.get('to')
             elif elem_type == 'error':
