@@ -53,12 +53,18 @@ class Workflow(Node):
         fs.write('Workflow: {0}\n'.format(self.name))
         for node in self.nodes:
             node.dump(fs, '   ')
-        
+
+    def json(self):
+        return {'name' : self.name,
+                'nodes' : [node.json() for node in self.nodes]}
+
         
 if __name__ == '__main__':
+    import json
     fname = sys.argv[1] if len(sys.argv) > 1 else "workflow.xml"
     
     wf = Workflow(fname)
-    wf.dump()
-    
+#    wf.dump()
+    print json.dumps(wf.json())
+
         
