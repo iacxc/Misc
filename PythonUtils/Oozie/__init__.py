@@ -1,3 +1,3 @@
 
 
-from Workflow import Workflow
+from Workflow import *

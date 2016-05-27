@@ -4,6 +4,52 @@ import re
 import sys
 from collections import OrderedDict
 
+__all__ = ('read_workflow',
+           'Node', 
+           'SimpleNode', 
+           'Workflow', 
+           'Start', 
+           'End', 
+           'Fork', 
+           'Join', 
+           'Decision', 
+           'Kill', 
+           'Action', 
+
+           'ShellAction', 
+           'SqoopAction', 
+           'FsAction', 
+           'HiveAction', 
+           'Hive2Action', 
+           'JavaAction', 
+           'EmailAction', 
+           'PigAction', 
+           'SshAction', 
+           'MapReduceAction', 
+ 
+           'Arg', 
+           'Argument', 
+           'CaptureOutput', 
+           'Case', 
+           'Command', 
+           'Configuration', 
+           'Default', 
+           'Delete', 
+           'Env', 
+           'Error', 
+           'Exec', 
+           'File', 
+           'JobTracker', 
+           'Message', 
+           'Name', 
+           'NameNode', 
+           'Ok', 
+           'Path', 
+           'Prepare', 
+           'Property', 
+           'Value', 
+)
+
 def get_namespace(tag):
     match = re.match(r'{(.*)}', tag)
 
@@ -15,11 +61,11 @@ def remove_namespace(tag):
 
 
 class Node(object):
-    def __init__(self, namespace=None, text=''):
+    def __init__(self, namespace=None, text='', nodes=[]):
         self.ns = namespace
         self.text = text
         self.attrs = OrderedDict()
-        self.nodes = []
+        self.nodes = list(nodes)
 
 
     @classmethod
@@ -188,8 +234,8 @@ class End(Node):
 
 
 class Fork(Node):
-    def __init__(self, name):
-        super(Fork, self).__init__()
+    def __init__(self, name, *args):
+        super(Fork, self).__init__(nodes=args)
         self.addattr('name', name)
 
 
@@ -208,11 +254,9 @@ class Fork(Node):
 
 
 class Kill(Node):
-    def __init__(self, name, message):
-        super(Kill, self).__init__()
+    def __init__(self, name, *args):
+        super(Kill, self).__init__(nodes=args)
         self.addattr('name', name)
-        if message:
-            self.append(message)
 
 
     @classmethod
@@ -231,8 +275,8 @@ class Kill(Node):
 
 
 class Decision(Node):
-    def __init__(self, name):
-        super(Decision, self).__init__()
+    def __init__(self, name, *args):
+        super(Decision, self).__init__(nodes=args)
         self.addattr('name', name)
 
 
@@ -278,8 +322,9 @@ class Join(Node):
 
 
 class Property(Node):
-    def __init__(self):
-        super(Property, self).__init__()
+    def __init__(self, *args):
+        super(Property, self).__init__(nodes=args)
+
 
     @classmethod
     def parse(cls, rootelem):
@@ -303,9 +348,8 @@ class Property(Node):
 
 
 class Configuration(Node):
-    def __init__(self, props=[]):
-        super(Configuration, self).__init__()
-        self.extend(props)
+    def __init__(self, *args):
+        super(Configuration, self).__init__(nodes=args)
 
 
     @classmethod
@@ -322,9 +366,9 @@ class Configuration(Node):
         return 'properties'
 
 
-class Shell(Node):
-    def __init__(self, namespace):
-        super(Shell, self).__init__(namespace)
+class ShellAction(Node):
+    def __init__(self, namespace, *args):
+        super(ShellAction, self).__init__(namespace, nodes=args)
 
 
     @classmethod
@@ -359,8 +403,9 @@ class Shell(Node):
 
 
 class Prepare(Node):
-    def __init__(self):
-        super(Prepare, self).__init__()
+    def __init__(self, *args):
+        super(Prepare, self).__init__(nodes=args)
+
 
     @classmethod
     def parse(cls, rootelem):
@@ -374,9 +419,9 @@ class Prepare(Node):
         return prepare
 
 
-class Sqoop(Node):
-    def __init__(self, namespace):
-        super(Sqoop, self).__init__(namespace)
+class SqoopAction(Node):
+    def __init__(self, namespace, *args):
+        super(SqoopAction, self).__init__(namespace, nodes=args)
 
 
     @classmethod
@@ -407,10 +452,9 @@ class Sqoop(Node):
 
 
 class Action(Node):
-    def __init__(self, name, nodes=[]):
-        super(Action, self).__init__()
+    def __init__(self, name, *args):
+        super(Action, self).__init__(nodes=args)
         self.addattr('name', name)
-        self.extend(nodes)
 
 
     @classmethod
@@ -426,8 +470,8 @@ class Action(Node):
             elif elem_type == 'error':
                 action.append(Error({'to' : elem.get('to')}))
             else:
-                klass = {'shell' : Shell,
-                         'sqoop' : Sqoop}.get(elem_type)
+                klass = {'shell' : ShellAction,
+                         'sqoop' : SqoopAction}.get(elem_type)
                 if klass:
                     action.append(klass.parse(elem))
 
@@ -442,40 +486,36 @@ class Action(Node):
         return {self.type: jsonobj}
 
 
-class MapReduce(Action):
+class MapReduceAction(Action):
     pass
     
-class MapReduce(Action):
+class FsAction(Action):
     pass
     
-class Fs(Action):
+class SshAction(Action):
     pass
     
-class Ssh(Action):
+class PigAction(Action):
     pass
     
-class Pig(Action):
-    pass
-    
-class Java(Action):
+class JavaAction(Action):
     pass
     
 
-class Email(Action):
+class EmailAction(Action):
     pass
     
-class Hive(Action):
+class HiveAction(Action):
     pass
     
-class Hive2(Action):
+class Hive2Action(Action):
     pass
     
 
 class Workflow(Node):
-    def __init__(self, namespace, name, nodes=[]):
-        super(Workflow, self).__init__(namespace)
+    def __init__(self, namespace, name, *args):
+        super(Workflow, self).__init__(namespace, nodes=args)
         self.addattr('name', name)
-        self.extend(nodes)
 
 
     @classmethod
@@ -520,24 +560,23 @@ if __name__ == '__main__':
 #    wf.dump(sys.stdout, '')
 #    print json.dumps(wf.json())
 
-    wf2 = Workflow('hello-namespace', 'hello', [
+    wf2 = Workflow('hello-namespace', 'hello', 
             Start('step1'),
-            Action('step1', [
-                Sqoop('sqoop-namespace')
-                    .append(JobTracker(text="a.b.c:8020"))
-                    .append(NameNode(text="a.b.c:8050"))
-                    .append(Configuration([
-                        Property().append(Name(text='mapred.job.queue.name'))
-                                  .append(Value(text='default')),
-                        Property().append(Name(text='name'))
-                                  .append(Value(text='value'))]))
-                    .append(Arg(text='import'))
-                    .append(Arg(text='-m'))
-                    .append(Arg(text='4'))
-                ,
+            Action('step1', 
+                SqoopAction('sqoop-namespace', 
+                    JobTracker(text="a.b.c:8020"),
+                    NameNode(text="a.b.c:8050"),
+                    Configuration(
+                        Property(Name(text='mapred.job.queue.name'),
+                                 Value(text='default')),
+                        Property(Name(text='name'),
+                                 Value(text='value'))),
+                    Arg(text='import'),
+                    Arg(text='-m'),
+                    Arg(text='4')),
                 Ok({'to': 'end'}),
-                Error({'to' : 'fail'})]),
+                Error({'to' : 'fail'})),
             Kill('fail', Message(text='Bad operation')),
-            End('end')])
+            End('end'))
 
     wf2.dump(sys.stdout, '  ')
