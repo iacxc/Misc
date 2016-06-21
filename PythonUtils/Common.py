@@ -80,15 +80,15 @@ class Command(object):
                     print self.cmdstr
 
                 if test:
-                    self.status, self.output = 0, ''
+                    self.status, self.output = SUCCESS, ''
                 else:
                     self.process = Popen(self.cmdstr, shell=True,
                                                   stdout=PIPE, stderr=PIPE)
                     self.output, self.error = self.process.communicate()
                     self.status = self.process.returncode
-            except Exception:
-                self.status = -1
-                self.error = 'Unknown error'
+            except Exception as exp:
+                self.status = exp.errno
+                self.error = exp.strerror
 
         thread = threading.Thread(target=target)
         thread.start()
@@ -111,10 +111,10 @@ def run_cmd(cmdstr, timeout=None, test=False):
     cmd = cmdstr.split(' ')[0]
     if cmd.startswith('/'):
         if not os.path.exists(cmd):
-            return E_NONEXT, '{0}: NO SUCH FILE OR DIRECTORY'.format(cmd)
+            return E_NONEXT, '%s: NO SUCH FILE OR DIRECTORY' % cmd
 
         elif not os.access(cmd, os.X_OK):
-            return E_NONEXE, '{0}: PERMISSION DENIED'.format(cmd)
+            return E_NONEXE, '%s: PERMISSION DENIED' % cmd
 
     command = Command(cmdstr)
     status, output = command.run(timeout, test)
@@ -137,7 +137,7 @@ def make_enum(enum_type='Enum', base_classes=None, methods=None, **attrs):
         methods = {}
 
     base_classes = base_classes + (object,)
-    for key, val in methods.iteritems():
+    for key, val in methods.items():
         methods[key] = classmethod(val)
 
     attrs['enums'] = attrs.copy()
