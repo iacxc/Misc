@@ -17,6 +17,9 @@ class Nil(object):
     def isEmpty(self):
         return True
 
+    def nth(self, idx):
+        raise RuntimeError("Empty list")
+        
     def __str__(self):
         return "()"
 
@@ -30,13 +33,26 @@ class Cons(object):
     def head(self):
         return self.__head
 
+
     @property
     def tail(self):
         return self.__tail
 
+
     @property
     def isEmpty(self):
         return False
+
+
+    def nth(self, idx):
+        if idx < 1:
+            raise RuntimeError("index must be positive")
+
+        if idx == 1:
+            return self.head
+        else:
+            return self.tail.nth(idx-1)
+
 
     def __str__(self):
         return "({0} {1})".format(self.head, self.tail)
@@ -72,6 +88,7 @@ def concat(list1, list2):
 if __name__ == "__main__":
     l1 = List(1, 2, List("hello", "world"), "a", "b", List(List('aa', 'bb')))
     print l1
+    print 'Third item:', l1.nth(3)
     print reversed(l1)
 
     l2 = List(1, 2, 3)
