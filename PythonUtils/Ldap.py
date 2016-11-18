@@ -134,7 +134,7 @@ if __name__ == '__main__':
     from optparse import OptionParser
 
     parser = OptionParser()
-    parser.add_option('--host', default='ldap-master.core.hp.com') # HPE
+    parser.add_option('--host', default='ldap.hp.com') # HPE
     parser.add_option('--ldaps', action='store_true', default=False)
     parser.add_option('-b', '--basedn', default='o=hp.com')
     parser.add_option('--limit', type=int, default=100)
