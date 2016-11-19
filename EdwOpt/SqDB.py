@@ -119,12 +119,12 @@ class Database(object):
         if __debug__ and self.__debug:
                 print(msg)
 
-    def _runsql(self, sqlstr):
+    def _runsql(self, sqlstr, *params):
         """ run a sql, return the cursor """
         self.log_debug(sqlstr)
 
         cursor = self.__db.cursor()
-        cursor.execute(sqlstr)
+        cursor.execute(sqlstr, *params)
 
         return cursor
 
@@ -176,18 +176,18 @@ class Database(object):
                 for table in sch.tables:
                     print('        %s' % table)
 
-    def getall(self, sqlstr):
+    def getall(self, sqlstr, *params):
         """ _runsql a query, return generator of Rows """
-        result = self._runsql(sqlstr)
+        result = self._runsql(sqlstr, *params)
 
         RowType = gen_rowtype(desc[0] for desc in result.description)
 
         for row in result.fetchall():
             yield RowType(row)
 
-    def getone(self, sqlstr):
+    def getone(self, sqlstr, *params):
         """ execute a query, return the first row """
-        result = self._runsql(sqlstr)
+        result = self._runsql(sqlstr, *params)
 
         RowType = gen_rowtype(desc[0] for desc in result.description)
         return RowType(result.fetchone())

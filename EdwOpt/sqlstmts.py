@@ -31,3 +31,8 @@ WHERE o.schema_uid = s.schema_uid
     AND o.object_name_space = 'TA'
     AND o.object_type = 'BT'
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE""" % {'catalog': catalog}
+
+
+def get_report(dsn, action):
+    """ get the report sql for a specfic dsn and action"""
+    pass
