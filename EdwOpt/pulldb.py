@@ -2,8 +2,7 @@
 
 from __future__ import print_function
 
-import SqDB
-
+from metricminer.models import SqDB
 
 if __name__ == '__main__':
     db = SqDB.Database('EMR_EDW')
