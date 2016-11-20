@@ -1,1 +1,87 @@
 {% extends "layout.html" %}
+{% block body %}
+ <form action="" method="post" id="form">
+     <table border="0" cellpadding="2" align="center">
+     <tr valign="center">
+         <td class="input">
+             <label for="dsn">DSN</label>
+             <select name="dsn" id="dsn">
+                 <option value="EMR_EDW">EMR_EDW</option>
+                 <option value="JAD_EDW">JAD_EDW</option>
+                 <option value="ZEO_EDW">ZEO_EDW</option>
+             </select>
+         </td>
+         <td class="input">
+             <label for="uid">UID</label>
+             <input type="text" name="uid" id="uid"/>
+         </td>
+         <td class="input">
+             <label for="pwd">PWD</label>
+             <input type="password" name="pwd" id="pwd"/>
+         </td>
+     </tr>
+     <tr valign="center">
+         <td class="input">
+             <label for="report">Report For</label>
+             <select name="report" id="report">
+                 <option value="rollups" selected="1">rollups</option>
+                 <option value="events">events</option>
+                 <option value="memory">memory</option>
+                 <option value="network">network</option>
+             </select>
+         </td>
+         <td class="input">
+             <label for="start_ts">Start Time</label>
+             <input type="text" name="start_ts" id="start_ts"/>
+         </td>
+         <td class="input">
+             <label for="end_ts">End Time</label>
+             <input type="text" name="end_ts" id="end_ts"/>
+         </td>
+     </tr>
+     <tr valign="bottom">
+     <td nowrap colspan="3">
+         <textarea name="sql" cols="70" id="sql"></textarea>
+         <input type="submit" value="Run"/>
+     </td>
+     </tr>
+     </table>
+
+</form>
+<hr/>
+<div id="rows"> </div>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        var socket = io.connect("http://" + document.domain + ":"
+                                  + location.port);
+
+        socket.on("connect", function() {
+            socket.emit("message", "I am connected");
+        });
+
+        socket.on("sql", function(data) {
+            $("#sql").val(data);
+        });
+
+        socket.on("result", function(data) {
+            $("#rows").html(data);
+        });
+
+        $("#report").change(function() {
+            socket.emit("report", $("#report").val());
+        });
+
+        $("#form").submit(function(e) {
+            e.preventDefault();
+
+            var sqlstr = $("#sql").val();
+            socket.emit("sql", sqlstr);
+
+        });
+    });
+</script>
+{% endblock %}
