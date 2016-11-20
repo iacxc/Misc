@@ -1,31 +1,8 @@
 from __future__ import print_function
 
 import pyodbc
-from collections import namedtuple
 
 import sqlstmts
-
-
-pyodbc.lowercase = False  # dont convert field name to lowercase
-
-def gen_rowtype(attr_names):
-    class Row(namedtuple('Row', attr_names)):
-        def __new__(cls, iterable):
-            return super(Row, cls).__new__(cls, *iterable)
-
-        def keys(self):
-            return tuple(attr_names)
-
-        def items(self):
-            return tuple((attr, getattr(self, attr)) for attr in attr_names)
-
-        def values(self):
-            return tuple(getattr(self, attr) for attr in attr_names)
-
-        def __iter__(self):
-            return iter(self.items())
-
-    return Row
 
 
 class Table(object):
@@ -99,10 +76,12 @@ class Catalog(object):
 
 
 class Database(object):
-    def __init__(self, dsn, debug=True):
+    def __init__(self, dsn,
+                 username='cheng-xin.cai@hpe.com',
+                 password='Iam@hpe.com', debug=True):
         self.__db = pyodbc.connect(dsn=dsn,
-                                   user='cheng-xin.cai@hpe.com',
-                                   pwd='Iam@hpe.com',
+                                   uid=username,
+                                   pwd=password,
                                    readonly=True)
         self.__debug = debug
         self.__catalogs = []
@@ -179,17 +158,15 @@ class Database(object):
         """ _runsql a query, return generator of Rows """
         result = self._runsql(sqlstr, *params)
 
-        RowType = gen_rowtype(desc[0] for desc in result.description)
-
-        for row in result.fetchall():
-            yield RowType(row)
+        return {'fields': [desc[0] for desc in result.description],
+                'rows': result.fetchall()}
 
     def getone(self, sqlstr, *params):
         """ execute a query, return the first row """
         result = self._runsql(sqlstr, *params)
 
-        RowType = gen_rowtype(desc[0] for desc in result.description)
-        return RowType(result.fetchone())
+        return {'fields': [desc[0] for desc in result.description],
+                'row': result.fetchone()}
 
 
 

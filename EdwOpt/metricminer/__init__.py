@@ -1,6 +1,8 @@
 
 from flask_socketio import SocketIO
-from flask import Flask
+from flask import Flask, render_template, flash
+
+from metricminer.models import SqDB
 
 
 def create_app():
@@ -28,9 +30,13 @@ def create_io(app):
         print('received report: %s' % report)
         socketio.emit('sql', 'Select a \nfrom b %s' % report)
 
-    @socketio.on('sql')
-    def handle_report(sql):
-        print('got sql : %s' % sql)
-        socketio.emit('result', 'Rows: (%s)' % sql)
+    @socketio.on('query')
+    def handle_report(query):
+        print('received query')
+        db = SqDB.Database(query['dsn'], query['uid'], query['pwd'])
+
+        result = db.getall(query['sql'])
+
+        socketio.emit('result', render_template('datatable.html', **result))
 
     return socketio

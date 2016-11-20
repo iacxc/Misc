@@ -42,14 +42,14 @@
      <tr valign="bottom">
      <td nowrap colspan="3">
          <textarea name="sql" cols="70" id="sql"></textarea>
-         <input type="submit" value="Run"/>
+         <input type="submit" value="Run" id="run"/>
      </td>
      </tr>
      </table>
 
 </form>
 <hr/>
-<div id="rows"> </div>
+<div id="data" style="width:100%;height:600px;overflow:scroll;display:none"></div>
 {% endblock %}
 
 {% block script %}
@@ -68,7 +68,8 @@
         });
 
         socket.on("result", function(data) {
-            $("#rows").html(data);
+            $("#data").html(data);
+            $("#data").css("display", "block");
         });
 
         $("#report").change(function() {
@@ -77,9 +78,13 @@
 
         $("#form").submit(function(e) {
             e.preventDefault();
+            $("#data").css("display", "none");
 
             var sqlstr = $("#sql").val();
-            socket.emit("sql", sqlstr);
+            socket.emit("query", {dsn: $("#dsn").val(),
+                                  uid: $("#uid").val(),
+                                  pwd: $("#pwd").val(),
+                                  sql: $("#sql").val()});
 
         });
     });

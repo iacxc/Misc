@@ -24,3 +24,35 @@ td.input {
     white-space: nowrap;
     text-align: right;
 }
+
+
+table.data {
+    border: 1px solid #cad9ea;
+    color: #444;
+    background-color: gray;
+    font-size: 12px;
+    table-layout: fixed;
+    empty-cells: show;
+    border-collapse: collapse;
+    margin: 0 auto;
+}
+tr.head {
+    height: 30px;
+    position: relative;
+    top:expression(this.offsetParent.scrollTop-2);
+}
+th.head {
+    background-repeat: repeat-x;
+    background-color: #dddddd;
+    border: 1px solid #aab9ca;
+}
+tr.data {
+    background-color: white;
+}
+tr.alter {
+    background-color: #f5fafe;
+}
+td.data {
+    white-space: nowrap;
+    border: 1px solid #aab9ca;
+}

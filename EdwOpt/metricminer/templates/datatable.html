@@ -1,0 +1,17 @@
+
+<table class="data">
+    <tr class="head">
+        {% for field in fields %}<th class="head">{{ field }}</td>{% endfor %}
+    </tr>
+    {% for row in rows %}
+    {% if loop.index is divisibleby 2 %}
+        <tr class="alter">
+    {% else %}
+        <tr class="data">
+    {% endif %}
+        {% for value in row %}
+            <td class="data">{{ value }}</td>
+        {% endfor %}
+    </tr>
+    {% endfor %}
+</table>
