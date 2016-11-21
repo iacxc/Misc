@@ -24,10 +24,7 @@
          <td class="input">
              <label for="report">Report For</label>
              <select name="report" id="report">
-                 <option value="rollups" selected="1">rollups</option>
-                 <option value="events">events</option>
-                 <option value="memory">memory</option>
-                 <option value="network">network</option>
+
              </select>
          </td>
          <td class="input">
@@ -56,6 +53,24 @@
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 <script type="text/javascript">
     $(document).ready(function() {
+        var reports = ["concurrency",
+                       "events",
+                       "memory",
+                       "network",
+                       "network aggr",
+                       "node",
+                       "rollups",
+                       "se_delta",
+                       "sessions",
+                       "session LDAP",
+                       "wms_resources",
+                       "wms_workload"];
+        reports.forEach(function(report) {
+            $("#report").append("<option value=\"" + report + "\">" +
+                                 report + "</option>");
+        });
+
+
         var socket = io.connect("http://" + document.domain + ":"
                                   + location.port);
 
@@ -68,8 +83,8 @@
         });
 
         socket.on("result", function(data) {
-            $("#data").html(data);
             $("#data").css("display", "block");
+            $("#data").append(data);
         });
 
         $("#report").change(function() {
@@ -78,13 +93,17 @@
 
         $("#form").submit(function(e) {
             e.preventDefault();
+            $("#data").html("");
             $("#data").css("display", "none");
 
             var sqlstr = $("#sql").val();
-            socket.emit("query", {dsn: $("#dsn").val(),
-                                  uid: $("#uid").val(),
-                                  pwd: $("#pwd").val(),
-                                  sql: $("#sql").val()});
+
+            socket.emit("query", {dsn:      $("#dsn").val(),
+                                  uid:      $("#uid").val(),
+                                  pwd:      $("#pwd").val(),
+                                  sql:      $("#sql").val(),
+                                  start_ts: $("#start_ts").val(),
+                                  end_ts:   $("#end_ts").val()});
 
         });
     });
