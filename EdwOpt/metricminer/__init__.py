@@ -3,7 +3,7 @@ from datetime import datetime
 from flask_socketio import SocketIO
 from flask import Flask, render_template, flash
 
-from metricminer.models import SqDB, sqlstmts
+from metricminer.models import SqDB, sqlstmt
 
 
 def create_app():

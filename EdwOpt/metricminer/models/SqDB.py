@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import pyodbc
 
-import sqlstmts
+from metricminer.models import sqlstmt
 
 
 class Table(object):
@@ -117,7 +117,7 @@ class Database(object):
             return
 
         # first get all catalogs and schemas
-        result = self._runsql(sqlstmts.get_all_schemas())
+        result = self._runsql(sqlstmt.get_all_schemas())
         curcat = None
         for row in result.fetchall():
             catname, schname = row[0].split('.', 1)
@@ -135,7 +135,7 @@ class Database(object):
 
         # get all tables
         for catalog in self.catalogs:
-            result = self._runsql(sqlstmts.get_tables(catalog.name))
+            result = self._runsql(sqlstmt.get_tables(catalog.name))
             for row in result.fetchall():
                 schname, tname = row[0].split('.', 1)
                 schname = '%s.%s' % (catalog.name, schname)
