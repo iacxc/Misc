@@ -1,7 +1,6 @@
 
 from __future__ import print_function
 
-
 def get_all_schemas():
     return """
 SELECT trim(c.cat_name) || '.' || trim(s.schema_name)
@@ -35,59 +34,12 @@ FOR READ UNCOMMITTED ACCESS IN SHARE MODE""" % {'catalog': catalog}
 
 def get_sql(action):
     """ get the report sql for a specific dsn and action"""
-    report = {
-        'concurrency': {
-            'Report': 'Queries/Concurrent Max 01 minute increments - Emtire System',
-            'SQL': '''SELECT
-    CAST(CAST((TIMEST) AS DATE) AS TIMESTAMP(0))
-        + CAST(HOUR((TIMEST)) AS INTERVAL HOUR)
-        + CAST(CAST(SUBSTRING(CAST(TIMEST AS CHAR(26)) FROM 15 FOR 2) AS INTEGER) AS INTERVAL MINUTE)
-    AS DATE_TIME
-,   MAX(CONC) AS MAX_CONCURRENCY
-FROM (SELECT A.EV AS TIMEST,
-             SUM(A.D) OVER (ORDER BY A.EV ROWS UNBOUNDED PRECEDING) AS CONC
-    FROM (SELECT
-            EXEC_START_LCT_TS AS EV,
-            (1)               AS D
-        FROM (SELECT
-                MIN(EXEC_START_LCT_TS) EXEC_START_LCT_TS ,
-                MAX(EXEC_END_LCT_TS) EXEC_END_LCT_TS
-            FROM
-                MANAGEABILITY.INSTANCE_REPOSITORY.METRIC_QUERY_3
-            WHERE
-                EXEC_START_LCT_TS BETWEEN ? AND ?
-                AND EXEC_START_LCT_TS IS NOT NULL
-                AND EXEC_END_LCT_TS IS NOT NULL
-            GROUP BY
-                QUERY_ID
-            ) STRT
-        WHERE
-            EXEC_END_LCT_TS IS NOT NULL
-        UNION ALL
-        SELECT
-            EXEC_END_LCT_TS AS EV,
-            (-1)            AS D
-        FROM (SELECT
-                MIN(EXEC_START_LCT_TS) EXEC_START_LCT_TS ,
-                MAX(EXEC_END_LCT_TS) EXEC_END_LCT_TS
-            FROM
-                MANAGEABILITY.INSTANCE_REPOSITORY.METRIC_QUERY_3
-            WHERE
-                EXEC_START_LCT_TS BETWEEN ? AND ?
-                AND EXEC_START_LCT_TS IS NOT NULL
-                AND EXEC_END_LCT_TS IS NOT NULL
-            GROUP BY
-                QUERY_ID
-            ) END_TIME
-        WHERE
-            EXEC_END_LCT_TS IS NOT NULL
-        ) A
-    ) C
-    GROUP BY 1
-ORDER BY 1
-READ UNCOMMITTED ACCESS IN SHARE MODE'''},
+    import concurrency
 
-        'network': {
+    return getattr(action, 'SQL')
+
+    report = {
+       'network': {
             'Report': 'Network/Sums 1-10-60 Intervals',
             'SQL': '''SELECT
     DATE_TIME
@@ -519,9 +471,9 @@ GROUP BY SCRIPT_NAME,
 	ROLLUP_NAME
 ORDER BY SCRIPT_START_TS'''},
 
-    'events': {
-        'Report': 'Events/Aggregates 1-10-60 Min Intervals w text2',
-        'SQL': '''SELECT
+        'events': {
+            'Report': 'Events/Aggregates 1-10-60 Min Intervals w text2',
+            'SQL': '''SELECT
     DATE_TIME              AS DATE_TIME
 ,   NODE_ID                AS NODE_ID
 ,   IP_ADDRESS_ID          AS IP_ADDRESS_ID
@@ -572,9 +524,9 @@ ORDER BY
 ,   EVENT_ID
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE'''},
 
-    'memory': {
-        'Report': 'Memory/Aggregates 1-10-60 Min Intervals',
-        'SQL': '''SELECT
+        'memory': {
+            'Report': 'Memory/Aggregates 1-10-60 Min Intervals',
+            'SQL': '''SELECT
     DATE_TIME
 ,   TRIM(IP_ADDRESS_ID          )              AS IP_ADDRESS_ID
 ,   CAST(AVG(TOTAL/1048576      ) AS DEC(8,2)) AS AVG_GB_TOTAL_MEM
@@ -624,9 +576,9 @@ ORDER BY
 ,   IP_ADDRESS_ID
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE'''},
 
-    'network aggr': {
-        'Report': 'Network/Aggregates 1-10-60 Min Intervals',
-        'SQL': '''SELECT
+        'network aggr': {
+            'Report': 'Network/Aggregates 1-10-60 Min Intervals',
+            'SQL': '''SELECT
     DATE_TIME
 ,   TRIM(INTERFACE         )                   AS INTERFACE
 ,   CAST(SUM(RCV_BYTES     ) AS NUMERIC(18,0)) AS SUM_RCV_BYTES
@@ -691,9 +643,9 @@ ORDER BY
   ,INTERFACE
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE''' % 1},
 
-    'node': {
-        'Report': 'Node/Aggregates 1-10-60 Min Intervals',
-        'SQL': '''SELECT
+        'node': {
+            'Report': 'Node/Aggregates 1-10-60 Min Intervals',
+            'SQL': '''SELECT
     DATE_TIME
 ,   IP_ADDRESS_ID
 ,   CAST(AVG(AVG_TOTAL   ) AS DEC(6,2)) AS "AVG_TOTAL_BUSY"
@@ -747,4 +699,3 @@ FOR READ UNCOMMITTED ACCESS IN SHARE MODE''' % 1},
     }.get(action)
 
     return report['SQL'] if report else ''
-
