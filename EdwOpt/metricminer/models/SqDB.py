@@ -79,10 +79,15 @@ class Database(object):
     def __init__(self, dsn,
                  username='cheng-xin.cai@hpe.com',
                  password='Iam@hpe.com', debug=True):
-        self.__db = pyodbc.connect(dsn=dsn,
-                                   uid=username,
-                                   pwd=password,
-                                   readonly=True)
+        connstr = ';'.join(['Dsn=%s' % dsn,
+                            'Uid=%s' % username,
+                            'Pwd=%s' % password,
+                            'App=%s' % 'Metric Miner',
+                            'Retrycount=3',
+                            'Retrytime=5000',
+                            ])
+        self.__db = pyodbc.connect(connstr)
+
         self.__debug = debug
         self.__catalogs = []
 

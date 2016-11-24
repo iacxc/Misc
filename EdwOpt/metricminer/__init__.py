@@ -1,7 +1,7 @@
 
 from datetime import datetime
 from flask_socketio import SocketIO
-from flask import Flask, render_template, flash
+from flask import Flask, render_template
 
 from metricminer.models import SqDB, sqlstmt
 
@@ -29,37 +29,49 @@ def create_io(app):
     @socketio.on('report')
     def get_sql(report):
         print('received report: %s' % report)
-        socketio.emit('sql',sqlstmts.get_sql(report))
+        socketio.emit('sql',sqlstmt.get_sql(report))
 
     @socketio.on('query')
     def run_query(query):
         print('received query')
-        start_ts = datetime.strptime(query['start_ts'], '%Y-%m-%d %H:%M:%S')
-        end_ts   = datetime.strptime(query['end_ts'], '%Y-%m-%d %H:%M:%S')
+
+        params = []
+        if query['start_ts'].strip():
+            start_ts = datetime.strptime(query['start_ts'], '%Y-%m-%d %H:%M:%S')
+            params.append(start_ts)
+
+        if query['end_ts'].strip():
+            end_ts   = datetime.strptime(query['end_ts'], '%Y-%m-%d %H:%M:%S')
+            params.append(end_ts)
+
         try:
             db = SqDB.Database(query['dsn'], query['uid'], query['pwd'])
 
-            result = db.getall(query['sql'], start_ts, end_ts)
-            socketio.emit('result', '<table class="data" cellpadding="2" cellspacing="2">\n')
-            socketio.emit('result', '<tr class="head">\n')
-            for field in result['fields']:
-                socketio.emit('result', '<th class="head">%s</th>\n' % field)
+            result = db.getall(query['sql'], *params)
 
-            socketio.emit('result', '</tr>\n')
-            for idx, row in enumerate(rows):
-                if idx % 2 == 0:
-                    socketio.emit('result', '<tr class="alter">\n')
-                else:
-                    socketio.emit('result', '<tr class="data">\n')
 
-                for value in row:
-                    socketio.emit('result', '<td class="data">%s</td>\n' % value)
+#           socketio.emit('result', '<table class="data" cellpadding="2" cellspacing="2">\n')
+#           socketio.emit('result', '<tr class="head">\n')
 
-                socketio.emit('result', '</tr>\n')
+#           socketio.emit('result',
+#               '\n'.join(['<th class="head">%s</th>' % field for field in result['fields']]))
 
-            socketio.emit('result', '</table>\n')
+#           socketio.emit('result', '</tr>\n')
+#           for idx, row in enumerate(result['rows']):
+#               if idx % 2 == 0:
+#                   socketio.emit('result', '<tr class="alter">\n')
+#               else:
+#                   socketio.emit('result', '<tr class="data">\n')
 
-#            socketio.emit('result', render_template('datatable.html', **result))
+#               socketio.emit('result',
+#                   '\n'.join(['<td class="data">%s</td>' % value for value in row]))
+
+#               socketio.emit('result', '</tr>\n')
+
+#           socketio.emit('result', '</table>\n')
+
+
+            socketio.emit('result', render_template('datatable.html', **result))
         except Exception as exp:
             socketio.emit('result', str(exp))
 

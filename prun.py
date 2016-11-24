@@ -1,0 +1,46 @@
+#!/usr/bin/python -O
+
+from __future__ import print_function
+
+
+import os.path
+import sys
+
+
+if __name__ == '__main__':
+    from optparse import OptionParser
+
+    parser = OptionParser()
+    parser.add_option('--host', action='append',
+                      help='remote hosts to run job')
+
+    opts, args = parser.parse_args()
+
+    hosts = ','.join(opts.host).split(',')
+
+    if len(hosts) == 0:
+        print('Empty host list')
+        sys.exit(1)
+
+    if len(args) != 1:
+        print('Only one command/script is allowed')
+        sys.exit(2)
+
+    script = args[0]
+
+    if os.path.isfile(script):
+        os.system('chmod +x %s' % script)
+
+        def command(host):
+            os.system('scp %(script)s %(host)s:/root' % {
+                'host': host, 'script': script})
+            os.system('ssh %(host)s /root/%(script)s' % {
+                'host': host, 'script': script})
+    else:
+        def command(host):
+            os.system('ssh %(host)s "%(script)s"' % {'host': host, 'script': script})
+
+    for host in hosts:
+        command(host)
+
+
