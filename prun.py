@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 
+import multiprocessing
 import os.path
 import sys
 
@@ -32,15 +33,24 @@ if __name__ == '__main__':
         os.system('chmod +x %s' % script)
 
         def command(host):
+            print(host)
             os.system('scp %(script)s %(host)s:/root' % {
                 'host': host, 'script': script})
             os.system('ssh %(host)s /root/%(script)s' % {
                 'host': host, 'script': script})
     else:
         def command(host):
-            os.system('ssh %(host)s "%(script)s"' % {'host': host, 'script': script})
+            print(host)
+            os.system('ssh %(host)s "%(script)s"' % {
+                'host': host, 'script': script})
 
-    for host in hosts:
-        command(host)
+    pool_size = multiprocessing.cpu_count() * 2
+
+    pool = multiprocessing.Pool(processes=pool_size)
+    pool.map(command, hosts)
+
+    pool.close()
+    pool.join()
+
 
 
