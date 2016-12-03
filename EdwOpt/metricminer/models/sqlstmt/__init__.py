@@ -32,6 +32,16 @@ WHERE o.schema_uid = s.schema_uid
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE""" % {'catalog': catalog}
 
 
+def get_cols(catalog, schema, table):
+    return """
+SELECT o.object_name, c.* 
+FROM %(catalog)s.hp_definition_schema.objects o,
+     %(catalog)s.hp_definition_schema.cols c
+WHERE o.object_uid = c.object_uid
+    AND o.object_name = '%(table)s'
+ORDER by c.column_number""" % {'catalog': catalog, 'table': table}
+
+
 def get_sql(action):
     """ get the report sql for a specific dsn and action"""
     import importlib
