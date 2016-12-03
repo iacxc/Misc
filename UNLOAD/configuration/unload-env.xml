@@ -6,19 +6,4 @@
     <value>/var/run/unload</value> 
     <description>Base stage directory name</description> 
   </property> 
-  <property> 
-    <name>concurrency</name>
-    <value>10</value> 
-    <description>Concurrency</description> 
-  </property> 
-  <property> 
-    <name>throttle</name>
-    <value>10</value> 
-    <description></description> 
-  </property> 
-  <property> 
-    <name>garbage.seconds</name>
-    <value>60</value> 
-    <description>Garbage seconds</description> 
-  </property> 
 </configuration>

@@ -20,14 +20,6 @@
                          <timeout>5000</timeout>
                     </commandScript>
 
-                    <configFiles>
-                        <configFile>
-                            <type>xml</type>
-                            <fileName>unload-env.xml</fileName>
-                            <dictionaryName>unload-env</dictionaryName>
-                        </configFile>
-                    </configFiles>
-
                     <logs>
                         <log>
                             <logId>unload</logId>
@@ -51,6 +43,7 @@
 
             <configuration-dependencies>
                 <config-type>unload-env</config-type>
+                <config-type>unload-site</config-type>
             </configuration-dependencies>
 
        </service>
