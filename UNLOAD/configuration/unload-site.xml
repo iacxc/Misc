@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property> 
+    <name>concurrency</name>
+    <value>10</value> 
+    <display-name>Concurrency</display-name>
+    <description>Concurrency</description> 
+  </property> 
+  <property> 
+    <name>throttle</name>
+    <value>10</value> 
+    <display-name>Throttle</display-name>
+    <description></description> 
+  </property> 
+  <property> 
+    <name>garbage.seconds</name>
+    <value>60</value> 
+    <display-name>Garbage seconds</display-name>
+    <description>Garbage seconds</description> 
+  </property> 
+</configuration>

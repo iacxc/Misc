@@ -4,6 +4,7 @@
   <property> 
     <name>base.dir</name>
     <value>/var/run/unload</value> 
+    <display-name>Base dir</display-name>
     <description>Base stage directory name</description> 
   </property> 
 </configuration>
