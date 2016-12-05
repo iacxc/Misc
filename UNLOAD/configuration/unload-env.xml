@@ -1,10 +1,19 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
-  <property> 
-    <name>base.dir</name>
-    <value>/var/run/unload</value> 
-    <display-name>Base dir</display-name>
-    <description>Base stage directory name</description> 
-  </property> 
+    <property> 
+        <name>base.dir</name>
+        <value>/var/run/unload</value> 
+        <display-name>Base dir</display-name>
+        <description>Base stage directory name</description> 
+        <editable-only-at-install>true</editable-only-at-install>
+    </property> 
+    <property> 
+        <name>unload.user</name>
+        <value>sqdev1</value> 
+        <display-name>Unload User</display-name>
+        <description>The user who will run the unload service</description> 
+        <editable-only-at-install>true</editable-only-at-install>
+    </property> 
+
 </configuration>
