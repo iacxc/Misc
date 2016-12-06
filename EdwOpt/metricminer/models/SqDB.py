@@ -111,12 +111,6 @@ class Database(object):
 
         return cursor
 
-    def getddl(self, tname):
-        sqlstr = 'SHOWDDL %s' % tname
-
-        result = self._runsql(sqlstr)
-        return '\n'.join(row[0] for row in result.fetchall())
-
     def _fill_struct(self):
         if len(self.catalogs) > 0:   # prevent doing it twice
             return
@@ -159,12 +153,37 @@ class Database(object):
                 for table in sch.tables:
                     print('        %s' % table)
 
-    def getcolumns(self, catalog, tname):
+    def getddl(self, catalog, tname):
         sqlstr = sqlstmt.get_cols(catalog, tname)
         result = self._runsql(sqlstr)
 
-        return {'fields': [desc[0] for desc in result.description],
-                'rows': result.fetchall()}
+        fieldtype = {
+            0: 'STRING',
+            2: 'STRING',
+            66: 'STRING',
+            130: 'SMALLINT',
+            132: 'INT',
+            133: 'INT',
+            134: 'BIGINT',
+            192: 'TIMESTAMP'
+        }
+        ddl = ["CREATE TABLE %s(" % tname]
+        firstfield = True
+        for row in result.fetchall():
+            if firstfield:
+                ddl.append("    %s %s" % (row.COLUMN_NAME.strip(), 
+                                          fieldtype[row.FS_DATA_TYPE]))
+                firstfield = False
+            else:
+                ddl.append("   ,%s %s" % (row.COLUMN_NAME.strip(), 
+                                          fieldtype[row.FS_DATA_TYPE]))
+
+        ddl.extend([")",
+                    "ROW FORMAT DELIMITED",
+                    "FIELDS TERMINATED BY'|'",
+                    " STORED AS TEXTFILE;"])
+
+        return "\n".join(ddl)
 
     def getall(self, sqlstr, *params):
         """ _runsql a query, return generator of Rows """

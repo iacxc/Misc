@@ -34,7 +34,7 @@ FOR READ UNCOMMITTED ACCESS IN SHARE MODE""" % {'catalog': catalog}
 
 def get_cols(catalog, table):
     return """
-SELECT o.object_name, c.* 
+SELECT o.object_name, c.column_name, c.fs_data_type
 FROM %(catalog)s.hp_definition_schema.objects o,
      %(catalog)s.hp_definition_schema.cols c
 WHERE o.object_uid = c.object_uid
