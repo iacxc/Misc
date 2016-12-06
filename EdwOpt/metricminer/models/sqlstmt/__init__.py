@@ -32,7 +32,7 @@ WHERE o.schema_uid = s.schema_uid
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE""" % {'catalog': catalog}
 
 
-def get_cols(catalog, schema, table):
+def get_cols(catalog, table):
     return """
 SELECT o.object_name, c.* 
 FROM %(catalog)s.hp_definition_schema.objects o,

@@ -159,6 +159,13 @@ class Database(object):
                 for table in sch.tables:
                     print('        %s' % table)
 
+    def getcolumns(self, catalog, tname):
+        sqlstr = sqlstmt.get_cols(catalog, tname)
+        result = self._runsql(sqlstr)
+
+        return {'fields': [desc[0] for desc in result.description],
+                'rows': result.fetchall()}
+
     def getall(self, sqlstr, *params):
         """ _runsql a query, return generator of Rows """
         result = self._runsql(sqlstr, *params)
@@ -172,7 +179,5 @@ class Database(object):
 
         return {'fields': [desc[0] for desc in result.description],
                 'row': result.fetchone()}
-
-
 
 
