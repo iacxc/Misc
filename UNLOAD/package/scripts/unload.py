@@ -45,9 +45,10 @@ class Slave(Script):
         Directory(format('{base_dir}/HDFS/HDFSstaging'),
                   owner=params.user, group=params.group)
         Directory(format('{base_dir}/HDFS/HDFSprocessing'),
-                  owner=params.user,
-                  group=params.group)
+                  owner=params.user, group=params.group)
         Directory(format('{base_dir}/HDFS/HDFSqueue'),
+                  owner=params.user, group=params.group)
+        Directory(format('{base_dir}/HDFS/HDFSreaping'),
                   owner=params.user, group=params.group)
 
         Directory(params.app_root, 

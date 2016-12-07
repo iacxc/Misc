@@ -11,9 +11,11 @@
             <components>
                 <component>
                     <name>UNLOADCRON</name>
-                    <displayName>Unload</displayName>
+                    <displayName>Unload Cronjob</displayName>
                     <category>SLAVE</category>
                     <cardinality>0+</cardinality>
+                    <recovery_enabled>true</recovery_enabled>
+
                     <commandScript>
                          <script>scripts/unload.py</script>
                          <scriptType>PYTHON</scriptType>
