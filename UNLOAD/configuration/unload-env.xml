@@ -8,11 +8,30 @@
         <description>Base stage directory name</description> 
         <editable-only-at-install>true</editable-only-at-install>
     </property> 
+
     <property> 
-        <name>unload.user</name>
-        <value>sqdev1</value> 
+        <name>unload_user</name>
         <display-name>Unload User</display-name>
-        <description>The user who will run the unload service</description> 
+        <value>sqdev1</value> 
+        <property-type>USER</property-type>
+        <description>User to run the UNLOAD as</description> 
+        <value-attributes>
+            <type>user</type>
+            <overridable>false</overridable>
+        </value-attributes>
+        <editable-only-at-install>true</editable-only-at-install>
+    </property> 
+
+    <property> 
+        <name>user_group</name>
+        <display-name>Unload User Group</display-name>
+        <value>hadoop</value> 
+        <property-type>GROUP</property-type>
+        <description>Group of the user to run the UNLOAD as</description> 
+        <value-attributes>
+            <type>user</type>
+            <overridable>false</overridable>
+        </value-attributes>
         <editable-only-at-install>true</editable-only-at-install>
     </property> 
 

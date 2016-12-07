@@ -4,13 +4,6 @@ import subprocess
 import sys
 
 from resource_management import *
-from resource_management.core.logger import Logger
-from resource_management.core.resources.system import Directory
-
-
-app_name = 'unloadCron'
-app_exec = app_name + '.pl'
-app_pid = app_name + '.pid'
 
 def read_pid(pidfile):
     try:
@@ -40,17 +33,40 @@ class Slave(Script):
        
         Logger.info('Configuring the service')
 
-        config = self.get_config()
-        Directory('%s/HDFS' % params.base_dir, create_parents=True)
-        Directory('%s/HDFS/HDFScontrol' % params.base_dir)
-        Directory('%s/HDFS/HDFSlogs' % params.base_dir)
-        Directory('%s/HDFS/HDFSstaging' % params.base_dir)
-        Directory('%s/HDFS/HDFSprocessing' % params.base_dir)
-        Directory('%s/HDFS/HDFSqueue' % params.base_dir)
+        Directory(params.base_dir, 
+                  owner=params.user, group=params.group,
+                  create_parents=True)
+        Directory(format('{base_dir}/HDFS'),
+                  owner=params.user, group=params.group)
+        Directory(format('{base_dir}/HDFS/HDFScontrol'),
+                  owner=params.user, group=params.group)
+        Directory(format('{base_dir}/HDFS/HDFSlogs'),
+                  owner=params.user, group=params.group)
+        Directory(format('{base_dir}/HDFS/HDFSstaging'),
+                  owner=params.user, group=params.group)
+        Directory(format('{base_dir}/HDFS/HDFSprocessing'),
+                  owner=params.user,
+                  group=params.group)
+        Directory(format('{base_dir}/HDFS/HDFSqueue'),
+                  owner=params.user, group=params.group)
 
-        File('%s/%s' % (params.base_dir, app_exec),
+        Directory(params.app_root, 
+                  owner=params.user, group=params.group,
+                  create_parents=True)
+        Directory(params.app_bin, 
+                  owner=params.user, group=params.group)
+        Directory(params.app_sbin,
+                  owner=params.user, group=params.group,
+                  create_parents=True)
+
+        File(format('{app_sbin}/{app_start}'),
              mode=0755,
-             content=StaticFile(app_exec))
+             owner=params.user, group=params.group,
+             content=StaticFile(params.app_start))
+        File(format('{app_bin}/{app_exec}'),
+             mode=0755,
+             owner=params.user, group=params.group,
+             content=StaticFile(params.app_exec))
 
         Logger.info('Finished configuring the slave')
 
@@ -58,23 +74,16 @@ class Slave(Script):
         import params
         env.set_params(params)
         self.configure(env)
+        pid_file = format('{base_dir}/{user}-{app}.pid')
 
-        pid_file = '%s/%s' % (params.base_dir, app_pid)
-        pid = read_pid(pid_file)
-        if pid != 0:
-            kill_process(pid)
-            File(pid_file, action='delete')
+        process_id_exists_command = as_sudo(['test', '-f', pid_file]) \
+                           + ' && ' + as_sudo(['pgrep', '-F', pid_file])
 
-        cmd = ['/usr/bin/perl', 
-               '%s/%s' % (params.base_dir, app_exec),
-               params.base_dir,
-               params.concurrency,
-               params.throttle,
-               params.garbage_seconds]
-        p = subprocess.Popen(cmd)
+        cmd = format('{app_sbin}/{app_start} {pid_file} {app_bin}/{app_exec} {base_dir} {concurrency} {throttle} {garbage_seconds}')
+        daemon_cmd = as_user(cmd, params.user)
 
-        with file(pid_file, 'w') as f:
-            f.write('%d\n' % p.pid)
+        File(pid_file, action='delete', not_if=process_id_exists_command)
+        Execute(daemon_cmd, not_if=process_id_exists_command)
 
         Logger.info('Started unload service')
 
@@ -82,10 +91,8 @@ class Slave(Script):
         import params
         env.set_params(params)
 
-        pid_file = '%s/%s' % (params.base_dir, app_pid)
-        pid = read_pid(pid_file)
-        kill_process(pid)
-        File(pid_file, action='delete')
+        pid_file = format('{base_dir}/{user}-{app}.pid')
+        kill_process(read_pid(pid_file))
 
         Logger.info('Service stopped')
 
@@ -94,14 +101,11 @@ class Slave(Script):
         env.set_params(params)
         Logger.info('Status ...')
 
-        pid_file = '%s/%s' % (params.base_dir, app_pid)
-        Logger.info('Checking pid file %s' % pid_file)
-
-        check_process_status(pid_file)
+        check_process_status(params.pid_file)
  
     def install_package(self, env):
         print 'Installing slave', env
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     Slave().execute()
