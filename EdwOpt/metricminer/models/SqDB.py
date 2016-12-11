@@ -1,6 +1,8 @@
 from __future__ import print_function
 
-import pyodbc
+import csv
+import odbc
+#import jdbc
 
 from metricminer.models import sqlstmt
 
@@ -79,14 +81,8 @@ class Database(object):
     def __init__(self, dsn,
                  username='cheng-xin.cai@hpe.com',
                  password='Iam@hpe.com', debug=True):
-        connstr = ';'.join(['Dsn=%s' % dsn,
-                            'Uid=%s' % username,
-                            'Pwd=%s' % password,
-                            'App=%s' % 'Metric Miner',
-                            'Retrycount=3',
-                            'Retrytime=5000',
-                            ])
-        self.__db = pyodbc.connect(connstr)
+#       self.__db = jdbc.get_connection(dsn, username, password)
+        self.__db = odbc.get_connection(dsn, username, password)
 
         self.__debug = debug
         self.__catalogs = []
@@ -171,17 +167,17 @@ class Database(object):
         firstfield = True
         for row in result.fetchall():
             if firstfield:
-                ddl.append("    %s %s" % (row.COLUMN_NAME.strip(), 
-                                          fieldtype[row.FS_DATA_TYPE]))
+                ddl.append("    %s %s" % (row[1].strip(), 
+                                          fieldtype[row[2]]))
                 firstfield = False
             else:
-                ddl.append("   ,%s %s" % (row.COLUMN_NAME.strip(), 
-                                          fieldtype[row.FS_DATA_TYPE]))
+                ddl.append("   ,%s %s" % (row[1].strip(), 
+                                          fieldtype[row[2]]))
 
         ddl.extend([")",
                     "ROW FORMAT DELIMITED",
                     "FIELDS TERMINATED BY'|'",
-                    " STORED AS TEXTFILE;"])
+                    "STORED AS TEXTFILE;"])
 
         return "\n".join(ddl)
 
@@ -199,4 +195,24 @@ class Database(object):
         return {'fields': [desc[0] for desc in result.description],
                 'row': result.fetchone()}
 
+    def dumptable(self, table=None, sql=None, *params):
+        if table is None and sql is None:
+            return
 
+        if sql is None:
+            sql = "SELECT * FROM %s" % table
+            params = []
+        
+        result = self._runsql(sql, *params)
+
+        if table is None:
+            table = 'TABLE'
+
+        with file('%s.header' % table, 'wb') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([desc[0] for desc in result.description])
+
+        with file('%s.csv' % table, 'wb') as csvfile:
+            writer = csv.writer(csvfile)
+            for row in result.fetchall():
+                writer.writerow(row)
