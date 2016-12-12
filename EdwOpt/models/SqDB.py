@@ -155,12 +155,12 @@ class Database(object):
         result = self._runsql(sqlstr)
 
         fieldtype = {
-            0: 'STRING',
-            2: 'STRING',
-            66: 'STRING',
+            0: 'VARCHAR',
+            2: 'VARCHAR',
+            66: 'VARCHAR',
             130: 'SMALLINT',
-            132: 'INT',
-            133: 'INT',
+            132: 'INTEGER',
+            133: 'INTEGER',
             134: 'BIGINT',
             192: 'TIMESTAMP'
         }
@@ -175,10 +175,10 @@ class Database(object):
                 ddl.append("   ,%s %s" % (row[1].strip(), 
                                           fieldtype[row[2]]))
 
-        ddl.extend([")",
-                    "ROW FORMAT DELIMITED",
-                    "FIELDS TERMINATED BY'|'",
-                    "STORED AS TEXTFILE;"])
+        ddl.append(");")
+#                    "ROW FORMAT DELIMITED",
+#                    "FIELDS TERMINATED BY'|'",
+#                    "STORED AS TEXTFILE;"])
 
         return "\n".join(ddl)
 

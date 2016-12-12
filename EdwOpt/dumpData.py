@@ -5,6 +5,18 @@ import os
 import sys
 from models import SqDB
 
+
+def time_it(func, *args, **kwargs):
+    import time
+
+    t0 = time.time()
+    result = func(*args, **kwargs)
+    t1 = time.time()
+
+    print("Elapsed time: %.3f" % (t1-t0))
+
+    return result
+
         
 if __name__ == "__main__":
     from optparse import OptionParser
@@ -38,6 +50,10 @@ if __name__ == "__main__":
 
     try:
         db = SqDB.Database(opts)
+
+#       time_it(db.pullobjs)
+#       time_it(db.dumpobjs)
+
         if opts.table.count('.') == 0:
             catalog, schema, table = \
                 'manageability', 'instance_repository', opts.table
@@ -47,9 +63,9 @@ if __name__ == "__main__":
         else:
             catalog, schema, table = opts.table.split('.')
 
-        print(db.getddl(catalog, table))
+        print(time_it(db.getddl, catalog, table))
 
-        db.dumpdata(table, opts.sql)
+#       time_it(db.dumpdata, table, opts.sql)
     except Exception as e:
         print(e)
         parser.print_help()
