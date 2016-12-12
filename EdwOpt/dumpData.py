@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import os
 import sys
-from models import SqDB
+from models import Seaquest
 
 
 def time_it(func, *args, **kwargs):
@@ -49,21 +49,21 @@ if __name__ == "__main__":
         sys.exit(1)
 
     try:
-        db = SqDB.Database(opts)
+        db = Seaquest.Database(opts)
 
 #       time_it(db.pullobjs)
 #       time_it(db.dumpobjs)
 
-        if opts.table.count('.') == 0:
-            catalog, schema, table = \
-                'manageability', 'instance_repository', opts.table
-        elif opts.table.count('.') == 1:
-            catalog = 'manageability'
-            schema, table = opts.table.split('.')
-        else:
-            catalog, schema, table = opts.table.split('.')
+        if opts.table:
+            table = opts.table
+            catalog, schema = 'manageability', 'instance_repository'
 
-        print(time_it(db.getddl, catalog, table))
+            if opts.table.count('.') == 1:
+                schema, table = opts.table.split('.')
+            elif opts.table.count('.') == 2:
+                catalog, schema, table = opts.table.split('.')
+
+            print(time_it(db.getddl, catalog, table))
 
 #       time_it(db.dumpdata, table, opts.sql)
     except Exception as e:

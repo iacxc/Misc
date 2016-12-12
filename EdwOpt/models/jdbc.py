@@ -12,15 +12,17 @@ class ServerError(Exception):
 
 def get_connection(url, options):
     classpath = os.getenv('CLASSPATH')
-    if options.classpath:
+
+    if getattr(options, 'classpath', None) is not None:
         if classpath:
-            classpath = classpath + ':' + options.classpath
+            classpath = ':'.join([classpath,  options.classpath])
         else:
             classpath = options.classpath
 
     if classpath:
         for path in classpath.split(':'):
-            sys.path.append(path)
+            if not path in sys.path:
+                sys.path.append(path)
 
     try:
         Driver = __import__(options.driver, 
@@ -30,12 +32,11 @@ def get_connection(url, options):
                               options.driver)
 
     props = java.util.Properties()
-    props.put('user', options.user)
-    props.put('password', options.password)
-    props.put('serverDataSource', options.dsn)
-
-    if options.server is None:
-        raise ServerError('Server name cannot be empty')
+    for attr in ('user', 'password'):
+        if hasattr(options, attr):
+            props.put(attr, getattr(options, attr))
+    if hasattr(options, 'dsn'):
+        props.put('serverDataSource', options.dsn)
 
     conn = Driver().connect(url, props)
 
