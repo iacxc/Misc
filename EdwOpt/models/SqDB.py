@@ -1,10 +1,8 @@
 from __future__ import print_function
 
 import csv
-import odbc
-#import jdbc
 
-from metricminer.models import sqlstmt
+import sqlstmt
 
 
 class Table(object):
@@ -78,11 +76,14 @@ class Catalog(object):
 
 
 class Database(object):
-    def __init__(self, dsn,
-                 username='cheng-xin.cai@hpe.com',
-                 password='Iam@hpe.com', debug=True):
-#       self.__db = jdbc.get_connection(dsn, username, password)
-        self.__db = odbc.get_connection(dsn, username, password)
+    def __init__(self, options, debug=True):
+        try:
+            import jdbc
+            self.__db = jdbc.get_connection(
+                           'jdbc:hpt4jdbc://%s:18650' % options.server, options)
+        except ImportError:
+            import odbc
+            self.__db = odbc.get_connection(options)
 
         self.__debug = debug
         self.__catalogs = []
@@ -150,7 +151,7 @@ class Database(object):
                     print('        %s' % table)
 
     def getddl(self, catalog, tname):
-        sqlstr = sqlstmt.get_cols(catalog, tname)
+        sqlstr = sqlstmt.get_cols(catalog, tname.upper())
         result = self._runsql(sqlstr)
 
         fieldtype = {
@@ -195,7 +196,7 @@ class Database(object):
         return {'fields': [desc[0] for desc in result.description],
                 'row': result.fetchone()}
 
-    def dumptable(self, table=None, sql=None, *params):
+    def dumpdata(self, table=None, sql=None, *params):
         if table is None and sql is None:
             return
 
