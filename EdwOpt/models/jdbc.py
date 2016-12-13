@@ -29,8 +29,9 @@ def get_connection(url, options):
                 sys.path.append(path)
 
     try:
-        Driver = __import__(options.driver, 
-                            globals(), locals(), options.driver)
+        import importlib
+
+        Driver = importlib.import_module(options.driver) 
     except ImportError:
         raise DriverNotFound('Cannot import %s, please check CLASSPATH' % 
                               options.driver)

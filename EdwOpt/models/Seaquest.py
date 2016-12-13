@@ -6,6 +6,7 @@ import sqlstmt
 
 
 NVARCHAR  = -9
+WCHAR     = -8
 TINYINT   = -6
 BIGINT    = -5
 CHAR      = 1
@@ -134,9 +135,10 @@ class Database(object):
     def _runsql(self, sqlstr, *params):
         """ run a sql, return the cursor """
         self.log_debug(sqlstr)
+        self.log_debug(params)
 
         cursor = self.cursor()
-        cursor.execute(sqlstr, *params)
+        cursor.execute(sqlstr, params)
 
         return cursor
 
@@ -180,7 +182,7 @@ class Database(object):
                     print('        %s' % table)
 
     def getddl(self, catalog, schema, table):
-
+        self.log_debug('%s.%s.%s' % (catalog, schema, table))
         fieldtype = {
             TINYINT: 'INTEGER',
             SMALLINT: 'INTEGER',
@@ -190,6 +192,7 @@ class Database(object):
             TIME: 'TIMESTAMP',
             TIMESTAMP: 'TIMESTAMP',
             CHAR: 'CHAR',
+            WCHAR: 'CHAR',
             NVARCHAR: 'VARCHAR',
             VARCHAR: 'VARCHAR',
             NUMERIC: 'DOUBLE',
