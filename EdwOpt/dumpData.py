@@ -56,39 +56,32 @@ if __name__ == "__main__":
         if opts.sql:
             print("Warning, sql will be overwritten when action provided")
 
-#    try:
-    while True:
-        db = Seaquest.Database(opts)
+    db = Seaquest.Database(opts)
 
 #       util.time_it(db.pullobjs)
 #       util.time_it(db.dumpobjs)
 
-        if opts.table:
-            table = opts.table
-            catalog, schema = 'MANAGEABILITY', 'INSTANCE_REPOSITORY'
+    if opts.table:
+        table = opts.table
+        catalog, schema = 'MANAGEABILITY', 'INSTANCE_REPOSITORY'
 
-            if opts.table.count('.') == 1:
-                schema, table = opts.table.split('.')
-            elif opts.table.count('.') == 2:
-                catalog, schema, table = opts.table.split('.')
+        if opts.table.count('.') == 1:
+            schema, table = opts.table.split('.')
+        elif opts.table.count('.') == 2:
+            catalog, schema, table = opts.table.split('.')
 
-            print(util.time_it(db.getddl, catalog, schema, table))
-        else:
-            table = None
+        print(util.time_it(db.getddl, catalog, schema, table))
+    else:
+        table = None
 
-        if opts.action:
-            from datetime import datetime
-            opts.sql = sqlstmt.get_sql(opts.action)
-            start_dt = datetime.strptime(opts.start, '%Y-%m-%d %H:%M:%S.%f')
-            end_dt = datetime.strptime(opts.end, '%Y-%m-%d %H:%M:%S.%f')
-            params = [start_dt, end_dt]
-        else:
-            params = []
+    if opts.action:
+        from datetime import datetime
+        opts.sql = sqlstmt.get_sql(opts.action)
+        start_dt = datetime.strptime(opts.start, '%Y-%m-%d %H:%M:%S.%f')
+        end_dt = datetime.strptime(opts.end, '%Y-%m-%d %H:%M:%S.%f')
+        params = [start_dt, end_dt]
+    else:
+        params = []
 
-        util.time_it(db.dumpdata, table, opts.sql, *params)
-
-        break
-#    except Exception as e:
-#        print(e)
-#        parser.print_help()
+    util.time_it(db.dumpdata, table, opts.sql, *params)
 

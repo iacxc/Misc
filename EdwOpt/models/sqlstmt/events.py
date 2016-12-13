@@ -2,9 +2,9 @@ Report = 'Events/Aggregates 1-10-60 Min Intervals w text2'
 SQL = '''SELECT
     DATE_TIME              AS DATE_TIME
 ,   NODE_ID                AS NODE_ID
-,   IP_ADDRESS_ID          AS IP_ADDRESS_ID
-,   COMPONENT_NAME         AS COMPONENT_NAME
-,   SEVERITY_NAME          AS SEVERITY_NAME
+,   trim(IP_ADDRESS_ID)    AS IP_ADDRESS_ID
+,   trim(COMPONENT_NAME)   AS COMPONENT_NAME
+,   trim(SEVERITY_NAME)    AS SEVERITY_NAME
 ,   EVENT_ID               AS EVENT_ID
 ,   COUNT(EVENT_ID)        AS EVENT_COUNTS
 ,   MIN(TEXT)              AS TEXT_EXAMPLE
