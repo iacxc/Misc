@@ -5,14 +5,34 @@ import csv
 import sqlstmt
 
 
+NVARCHAR  = -9
+TINYINT   = -6
+BIGINT    = -5
+CHAR      = 1
+NUMERIC   = 2
+INTEGER   = 4
+SMALLINT  = 5
+FLOAE     = 6
+DOUBLE    = 8
+VARCHAR   = 12
+DATE      = 91
+TIME      = 92
+TIMESTAMP = 93
+
+
 class Table(object):
-    def __init__(self, schname, tname, ddl=None):
-        self.__name = '%s.%s' % (schname, tname)
+    def __init__(self, catname, schname, tname, ddl=None):
+        self.__name = tname
+        self.__fullname = '.'.join([catname, schname, tname])
         self.__ddl = ddl
 
     @property
     def name(self):
         return self.__name
+
+    @property
+    def fullname(self):
+        return self.__fullname
 
     @property
     def ddl(self):
@@ -22,17 +42,22 @@ class Table(object):
         self.__ddl = ddl
 
     def __repr__(self):
-        return '<Table %s>' % self.name
+        return '<Table %s>' % self.fullname
 
 
 class Schema(object):
     def __init__(self, catname, schname):
-        self.__name = '%s.%s' % (catname, schname)
+        self.__name = schname
+        self.__fullname = '%s.%s' % (catname, schname)
         self.__tables = []
 
     @property
     def name(self):
         return self.__name
+
+    @property
+    def fullname(self):
+        return self.__fullname
 
     @property
     def tables(self):
@@ -47,7 +72,7 @@ class Schema(object):
         self.__tables.append(table)
 
     def __repr__(self):
-        return '<Schema %s>' % self.name
+        return '<Schema %s>' % self.fullname
 
 
 class Catalog(object):
@@ -81,9 +106,13 @@ class Database(object):
             import jdbc
             self.__db = jdbc.get_connection(
                            'jdbc:hpt4jdbc://%s:18650' % options.server, options)
+            self.get_tables = jdbc.get_tables
+            self.get_columns = jdbc.get_columns
         except ImportError:
             import odbc
             self.__db = odbc.get_connection(options)
+            self.get_tables = odbc.get_tables
+            self.get_columns = odbc.get_columns
 
         self.__debug = debug
         self.__catalogs = []
@@ -91,6 +120,9 @@ class Database(object):
     @property
     def catalogs(self):
         return self.__catalogs
+
+    def cursor(self):
+        return self.__db.cursor()
 
     def add_catalog(self, catalog):
         self.__catalogs.append(catalog)
@@ -103,7 +135,7 @@ class Database(object):
         """ run a sql, return the cursor """
         self.log_debug(sqlstr)
 
-        cursor = self.__db.cursor()
+        cursor = self.cursor()
         cursor.execute(sqlstr, *params)
 
         return cursor
@@ -113,31 +145,28 @@ class Database(object):
             return
 
         # first get all catalogs and schemas
-        result = self._runsql(sqlstmt.get_all_schemas())
-        curcat = None
+        result = self._runsql(sqlstmt.get_all_catalogs())
         for row in result.fetchall():
-            catname, schname = row[0].split('.', 1)
-            if curcat is None or curcat.name != catname:          # a new catalog
-                if curcat:
-                    self.add_catalog(curcat)
-                curcat = Catalog(catname)
+            catname = row[0]
+            cat = Catalog(catname)
 
-            schema = Schema(catname, schname)
+            # get all tables for catalog
+            cursch = None
+            for row in self.get_tables(self.cursor(), catname):
+                schname = row[1]
+                tablename = row[2]
+                if cursch is None or cursch.name != schname:
+                    if cursch:
+                        cat.add_schema(cursch)
+                    cursch = Schema(catname, schname)
 
-            curcat.add_schema(schema)
+                table = Table(catname, schname, tablename)
+                cursch.add_table(table)
 
-        if curcat:
-            self.add_catalog(curcat)
+            if cursch:
+                cat.add_schema(cursch)
 
-        # get all tables
-        for catalog in self.catalogs:
-            result = self._runsql(sqlstmt.get_tables(catalog.name))
-            for row in result.fetchall():
-                schname, tname = row[0].split('.', 1)
-                schname = '%s.%s' % (catalog.name, schname)
-
-                table = Table(schname, tname)
-                catalog.get_schema(schname).add_table(table)
+            self.add_catalog(cat)
 
     def pullobjs(self):
         self._fill_struct()
@@ -150,30 +179,31 @@ class Database(object):
                 for table in sch.tables:
                     print('        %s' % table)
 
-    def getddl(self, catalog, tname):
-        sqlstr = sqlstmt.get_cols(catalog, tname.upper())
-        result = self._runsql(sqlstr)
+    def getddl(self, catalog, schema, table):
 
         fieldtype = {
-            0: 'VARCHAR',
-            2: 'VARCHAR',
-            66: 'VARCHAR',
-            130: 'SMALLINT',
-            132: 'INTEGER',
-            133: 'INTEGER',
-            134: 'BIGINT',
-            192: 'TIMESTAMP'
+            TINYINT: 'INTEGER',
+            SMALLINT: 'INTEGER',
+            INTEGER: 'INTEGER',
+            BIGINT: 'BIGINT',
+            DATE: 'TIMESTAMP',
+            TIME: 'TIMESTAMP',
+            TIMESTAMP: 'TIMESTAMP',
+            CHAR: 'CHAR',
+            NVARCHAR: 'VARCHAR',
+            VARCHAR: 'VARCHAR',
+            NUMERIC: 'DOUBLE',
         }
-        ddl = ["CREATE TABLE %s(" % tname]
+        ddl = ["CREATE TABLE %s(" % table]
         firstfield = True
-        for row in result.fetchall():
+        for row in self.get_columns(self.cursor(), catalog, schema, table):
             if firstfield:
-                ddl.append("    %s %s" % (row[1].strip(), 
-                                          fieldtype[row[2]]))
+                ddl.append("    %s %s" % (row[3].strip(), 
+                                          fieldtype[row[4]]))
                 firstfield = False
             else:
-                ddl.append("   ,%s %s" % (row[1].strip(), 
-                                          fieldtype[row[2]]))
+                ddl.append("   ,%s %s" % (row[3].strip(), 
+                                          fieldtype[row[4]]))
 
         ddl.append(");")
 #                    "ROW FORMAT DELIMITED",

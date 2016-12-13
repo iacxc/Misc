@@ -3,21 +3,11 @@ from __future__ import print_function
 
 import os
 import sys
+
 from models import Seaquest
+import util
 
 
-def time_it(func, *args, **kwargs):
-    import time
-
-    t0 = time.time()
-    result = func(*args, **kwargs)
-    t1 = time.time()
-
-    print("Elapsed time: %.3f" % (t1-t0))
-
-    return result
-
-        
 if __name__ == "__main__":
     from optparse import OptionParser
 
@@ -51,8 +41,8 @@ if __name__ == "__main__":
     try:
         db = Seaquest.Database(opts)
 
-#       time_it(db.pullobjs)
-#       time_it(db.dumpobjs)
+#       util.time_it(db.pullobjs)
+#       util.time_it(db.dumpobjs)
 
         if opts.table:
             table = opts.table
@@ -63,9 +53,9 @@ if __name__ == "__main__":
             elif opts.table.count('.') == 2:
                 catalog, schema, table = opts.table.split('.')
 
-            print(time_it(db.getddl, catalog, table))
+            print(util.time_it(db.getddl, catalog, table))
 
-#       time_it(db.dumpdata, table, opts.sql)
+#       util.time_it(db.dumpdata, table, opts.sql)
     except Exception as e:
         print(e)
         parser.print_help()

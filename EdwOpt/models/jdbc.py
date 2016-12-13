@@ -5,10 +5,14 @@ import sys
 
 from com.ziclix.python.sql import PyConnection
 
+
 class DriverNotFound(Exception):
     pass
+
+
 class ServerError(Exception):
     pass
+
 
 def get_connection(url, options):
     classpath = os.getenv('CLASSPATH')
@@ -41,3 +45,15 @@ def get_connection(url, options):
     conn = Driver().connect(url, props)
 
     return PyConnection(conn)
+
+
+def get_tables(cursor, catalog, schema='%', table='%'):
+    cursor.tables(catalog, schema, table, ['TABLE'])
+
+    return cursor.fetchall()
+
+
+def get_columns(cursor, catalog, schema='%', table='%', column='%'):
+    cursor.columns(catalog, schema, table, column)
+
+    return cursor.fetchall()

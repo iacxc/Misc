@@ -1,6 +1,13 @@
 
 from __future__ import print_function
 
+def get_all_catalogs():
+    return """
+SELECT trim(cat_name)
+    FROM hp_system_catalog.system_schema.catsys
+FOR READ UNCOMMITTED ACCESS IN SHARE MODE"""
+
+
 def get_all_schemas():
     return """
 SELECT trim(c.cat_name) || '.' || trim(s.schema_name)
