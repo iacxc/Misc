@@ -20,6 +20,22 @@ DATE      = 91
 TIME      = 92
 TIMESTAMP = 93
 
+def ft_text(ft):
+    fieldtype = {TINYINT: 'INTEGER',
+                 SMALLINT: 'INTEGER',
+                 INTEGER: 'INTEGER',
+                 BIGINT: 'BIGINT',
+                 DATE: 'TIMESTAMP',
+                 TIME: 'TIMESTAMP',
+                 TIMESTAMP: 'TIMESTAMP',
+                 CHAR: 'CHAR',
+                 WCHAR: 'CHAR',
+                 NVARCHAR: 'VARCHAR',
+                 VARCHAR: 'VARCHAR',
+                 NUMERIC: 'DOUBLE',
+    }
+    return fieldtype[ft]
+ 
 
 class Table(object):
     def __init__(self, catname, schname, tname, ddl=None):
@@ -183,37 +199,22 @@ class Database(object):
 
     def getddl(self, catalog, schema, table):
         self.log_debug('%s.%s.%s' % (catalog, schema, table))
-        fieldtype = {
-            TINYINT: 'INTEGER',
-            SMALLINT: 'INTEGER',
-            INTEGER: 'INTEGER',
-            BIGINT: 'BIGINT',
-            DATE: 'TIMESTAMP',
-            TIME: 'TIMESTAMP',
-            TIMESTAMP: 'TIMESTAMP',
-            CHAR: 'CHAR',
-            WCHAR: 'CHAR',
-            NVARCHAR: 'VARCHAR',
-            VARCHAR: 'VARCHAR',
-            NUMERIC: 'DOUBLE',
-        }
         ddl = ["CREATE TABLE %s(" % table]
         firstfield = True
         for row in self.get_columns(self.cursor(), catalog, schema, table):
             if firstfield:
-                ddl.append("    %s %s" % (row[3].strip(), 
-                                          fieldtype[row[4]]))
+                ddl.append("    %s %s" % (row[3].strip(), ft_text(row[4])))
                 firstfield = False
             else:
-                ddl.append("   ,%s %s" % (row[3].strip(), 
-                                          fieldtype[row[4]]))
+                ddl.append("   ,%s %s" % (row[3].strip(), ft_text(row[4])))
 
         ddl.append(");")
 #                    "ROW FORMAT DELIMITED",
 #                    "FIELDS TERMINATED BY'|'",
 #                    "STORED AS TEXTFILE;"])
 
-        return "\n".join(ddl)
+        if len(ddl) > 2:
+            return "\n".join(ddl)
 
     def getall(self, sqlstr, *params):
         """ _runsql a query, return generator of Rows """
@@ -242,9 +243,17 @@ class Database(object):
         if table is None:
             table = 'TABLE'
 
-        with file('%s.header' % table, 'wb') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([desc[0] for desc in result.description])
+        with file('%s.sql' % table, 'wb') as ddlfile:
+            ddlfile.write("CREATE TABLE %s(\n" % table)
+            firstfield = True
+            for desc in result.description:
+                if firstfield:
+                    ddlfile.write("    %s %s\n" % (desc[0], ft_text(desc[1])))
+                    firstfield = False
+                else:
+                    ddlfile.write("   ,%s %s\n" % (desc[0], ft_text(desc[1])))
+
+            ddlfile.write(");\n")
 
         with file('%s.csv' % table, 'wb') as csvfile:
             writer = csv.writer(csvfile)

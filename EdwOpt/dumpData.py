@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
     if opts.table:
         table = opts.table
-        catalog, schema = 'MANAGEABILITY', 'INSTANCE_REPOSITORY'
+        catalog, schema = '%', '%'
 
         if opts.table.count('.') == 1:
             schema, table = opts.table.split('.')
