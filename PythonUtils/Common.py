@@ -17,14 +17,17 @@ __all__ = ( 'check_module',
             'decode_int',
             'time_it',
             'which',
-            'get_hostid')
+            'get_hostid',
+            'md5sum')
 
+
+import base64
+from datetime import datetime
+import hashlib
 import os
+import struct
 from subprocess import Popen, PIPE
 import threading
-from datetime import datetime
-import base64
-import struct
 
 
 #constants
@@ -224,3 +227,21 @@ def get_input(prompt, hint=None, default=None, convert=None):
     if answer.strip() == "": answer = default
 
     return answer if convert is None else convert(answer)
+
+
+def md5sum(fname):
+    def sumfile(fobj):
+        m = hashlib.new('md5')
+
+        while True:
+            d = fobj.read(8096)
+            if not d:
+                break
+
+            m.update(d)
+
+        return m.hexdigest()
+
+    with file(fname, 'rb') as f:
+        return sumfile(f)
+
