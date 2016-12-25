@@ -17,6 +17,8 @@ __all__ = ( 'check_module',
             'decode_int',
             'time_it',
             'which',
+            'get_input',
+            'get_script_path',
             'get_hostid',
             'md5sum')
 
@@ -25,8 +27,10 @@ import base64
 from datetime import datetime
 import hashlib
 import os
+import os.path
 import struct
 from subprocess import Popen, PIPE
+import sys
 import threading
 
 
@@ -215,6 +219,7 @@ def get_hostid(buf=[]):
 
 
 def get_input(prompt, hint=None, default=None, convert=None):
+    """ get input from stdin """
     if hint:
         prompt += " (" + hint
         if default:
@@ -245,3 +250,11 @@ def md5sum(fname):
     with file(fname, 'rb') as f:
         return sumfile(f)
 
+
+def get_script_path():
+    """ get the script's path """
+    path = sys.path[0]
+    if os.path.isdir(path):
+        return path
+    elif os.path.isfile(path):
+        return os.path.dirname(path)
