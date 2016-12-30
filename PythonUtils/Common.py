@@ -18,6 +18,8 @@ __all__ = ( 'check_module',
             'time_it',
             'which',
             'get_input',
+            'gcd',
+            'lcm',
             'get_script_path',
             'get_hostid',
             'md5sum')
@@ -258,3 +260,27 @@ def get_script_path():
         return path
     elif os.path.isfile(path):
         return os.path.dirname(path)
+
+
+def gcd(m, n, *args):
+    """ get the greatest common divisor """
+    if m < n: return gcd(n, m, *args)
+
+    while m % n != 0:
+        m, n = n, m % n
+
+    if len(args) == 0:
+        return n
+    else:
+        return gcd(n, *args)
+
+
+def lcm(m, n, *args):
+    """ get the lowest common multiple """
+    g = gcd(m, n)
+    l = m * n / g
+
+    if len(args) == 0:
+        return l
+    else:
+        return lcm(l, *args)
