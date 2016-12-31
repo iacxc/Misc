@@ -155,7 +155,6 @@ def make_enum(enum_type='Enum', base_classes=None, methods=None, **attrs):
     return type(enum_type, base_classes, methods)
 
 
-
 def encode_int(n):
     """
        encode an integer to a string using base64
@@ -264,15 +263,13 @@ def get_script_path():
 
 def gcd(m, n, *args):
     """ get the greatest common divisor """
-    if m < n: return gcd(n, m, *args)
+    if m < n: 
+        return gcd(n, m, *args)
 
     while m % n != 0:
         m, n = n, m % n
 
-    if len(args) == 0:
-        return n
-    else:
-        return gcd(n, *args)
+    return n if len(args) == 0 else gcd(n, *args)
 
 
 def lcm(m, n, *args):
@@ -280,7 +277,4 @@ def lcm(m, n, *args):
     g = gcd(m, n)
     l = m * n / g
 
-    if len(args) == 0:
-        return l
-    else:
-        return lcm(l, *args)
+    return l if len(args) == 0 else lcm(l, *args)
