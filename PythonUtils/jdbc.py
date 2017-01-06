@@ -43,9 +43,9 @@ def get_connection(url, options):
     if hasattr(options, 'dsn'):
         props.put('serverDataSource', options.dsn)
 
-    conn = Driver().connect(url, props)
+    db = Driver().connect(url, props)
 
-    return PyConnection(conn)
+    return PyConnection(db)
 
 
 def get_tables(cursor, catalog, schema='%', table='%'):
