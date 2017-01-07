@@ -17,11 +17,11 @@ if __name__ == '__main__':
 
     opts, args = parser.parse_args()
 
-    hosts = ','.join(opts.host).split(',')
-
-    if len(hosts) == 0:
+    if opts.host is None:
         print('Empty host list')
         sys.exit(1)
+
+    hosts = ','.join(opts.host).split(',')
 
     if len(args) != 1:
         print('Only one command/script is allowed')
