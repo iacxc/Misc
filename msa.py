@@ -6,14 +6,17 @@ import time
 import telnetlib
 import xml.etree.ElementTree as ET
 
+
 class MsaException(Exception):
     pass
+
 
 class MsaObject(type):
     def __new__(cls, name, bases, dct):
         for attr in dct.get('__attrs__', ()):
             dct[attr] = None
             if attr[0] == '_':
+
                 def getter(self, attr=attr):
                     return getattr(self, attr)
 
@@ -21,7 +24,7 @@ class MsaObject(type):
 
         return super(MsaObject, cls).__new__(cls, name, bases, dct)
 
-    
+
 @six.add_metaclass(MsaObject)
 class Volume(object):
     """ Volume """
@@ -51,27 +54,27 @@ class Volume(object):
 @six.add_metaclass(MsaObject)
 class VDisk(object):
     """ VDisk """
-    __attrs__ = ('_name', '_raid', '_diskcount', '_controller', '_slots', '_volumes')
-    def __init__(self, name, controller, raid='NRAID', diskcount=1, slots=None):
+    __attrs__ = ('_name', '_raid', '_diskcount', '_controller', '_slots',
+                 '_volumes')
+
+    def __init__(self, name, controller, raid='NRAID', diskcount=1,
+                 slots=None):
         self._name = name
         self._controller = controller
         self._raid = raid
         self._diskcount = diskcount
- 
+
         self._slots = [] if slots is None else Gslots.split(',')
         self._volumes = []
 
     def __str__(self):
-        
+
         return ('<VDisk: %s '
                 '(controller: %s, raid: %s, '
                 'diskcount: %s, slots: [%s])>\n    %s') % (
-            self._name, 
-            self._controller,
-            self._raid, 
-            self._diskcount, 
-            ','.join(self._slots), 
-            '\n    '.join(str(volume) for volume in self._volumes))
+                    self._name, self._controller, self._raid, self._diskcount,
+                    ','.join(self._slots),
+                    '\n    '.join(str(volume) for volume in self._volumes))
 
     def add_slot(self, slot):
         self._slots.append(slot)
@@ -82,9 +85,11 @@ class VDisk(object):
         return self._volumes
 
     def remove_volumes(self, volnames):
-        self._volumes = [vol for vol in self._volumes 
-                             if not vol.name in volnames]
+        self._volumes = [
+            vol for vol in self._volumes if not vol.name in volnames
+        ]
         return self._volumes
+
 
 class MSA2000(telnetlib.Telnet, object):
     username = 'manage'
@@ -133,7 +138,7 @@ class MSA2000(telnetlib.Telnet, object):
             print('Running "%s" ...' % cmd)
 
         self._send(cmd)
-        output = self._receive()[:-2] # skip the prompt
+        output = self._receive()[:-2]  # skip the prompt
         if not output.startswith('<?xml'):
             output = '\n'.join(output.split('\n')[1:])
 
@@ -141,15 +146,17 @@ class MSA2000(telnetlib.Telnet, object):
         objects = []
         for elem in xmltree.findall('OBJECT'):
             props = dict((prop.get('name'), prop.text)
-                        for prop in elem.findall('PROPERTY'))
+                         for prop in elem.findall('PROPERTY'))
 
             if elem.get('basetype') == 'status':
                 if props['return-code'].strip() != '0':
                     self._error(props['response'])
 
-            else:        
-                objects.append({'type': elem.get('basetype'),
-                                'property': props})
+            else:
+                objects.append({
+                    'type': elem.get('basetype'),
+                    'property': props
+                })
 
         return objects
 
@@ -161,7 +168,7 @@ class MSA2000(telnetlib.Telnet, object):
 
     def _get_volumes(self):
         return self._run('show volumes')
-    
+
     def _get_volume_maps(self):
         return self._run('show volume-maps')
 
@@ -170,12 +177,12 @@ class MSA2000(telnetlib.Telnet, object):
             return
 
         cmd = 'delete vdisks prompt yes %s' % ','.join(vdisks)
-        return self._run(cmd) 
+        return self._run(cmd)
 
     def _delete_volumes(self, vdname, volnames=[]):
         if len(volnames) == 0:
             return
-        
+
         cmd = 'delete volumes %s' % ','.join(volnames)
         return self._run(cmd)
 
@@ -188,26 +195,26 @@ class MSA2000(telnetlib.Telnet, object):
     def _create_volume(self, vdname, name, size, access, lun, ports):
         cmd = ('create volume'
                ' vdisk %s size %s access %s lun %s ports %s %s') % (
-            vdname, size, access, lun, ports, name)
+                   vdname, size, access, lun, ports, name)
 
         return self._run(cmd)
 
     def _scan(self):
         if len(self._vdisks) > 0:
-             return
+            return
 
         for vdisk_entry in self._get_vdisks():
-            vdisk = VDisk(vdisk_entry['property']['name'], 
+            vdisk = VDisk(vdisk_entry['property']['name'],
                           vdisk_entry['property']['owner'],
-                          vdisk_entry['property']['raidtype'], 
+                          vdisk_entry['property']['raidtype'],
                           vdisk_entry['property']['diskcount'])
 
             for disk_entry in self._get_disks('vdisk %s' % vdisk.name):
-                vdisk.add_slot(disk_entry['property']['location'])            
+                vdisk.add_slot(disk_entry['property']['location'])
 
             self._vdisks.append(vdisk)
 
-        if len(self._vdisks) == 0: # no vdisk
+        if len(self._vdisks) == 0:  # no vdisk
             return
 
         vol_ref = {}
@@ -221,7 +228,7 @@ class MSA2000(telnetlib.Telnet, object):
                 for vdisk in self._vdisks:
                     if vdisk.name == vdname:
                         vdisk.add_volume(volume)
-        
+
         if len(vol_ref) == 0:
             return
 
@@ -250,8 +257,9 @@ class MSA2000(telnetlib.Telnet, object):
                 raise MsaException('Vdisk "%s" not exists' % vdname)
 
         self._delete_vdisks(vdnames)
-        self._vdisks = [vdisk for vdisk in self._vdisks
-                              if not vdisk.name in vdnames] 
+        self._vdisks = [
+            vdisk for vdisk in self._vdisks if not vdisk.name in vdnames
+        ]
 
     def delete_volumes(self, vdname, volnames):
         vdisk = self.find_vdisk(vdname)
@@ -264,11 +272,12 @@ class MSA2000(telnetlib.Telnet, object):
     def create_vdisks(self, vdconfs):
         for conf in vdconfs:
             if self.find_vdisk(conf['name']):
-                raise MsaException('Vdisk "%s" exists, cannot create' % conf['name'])
+                raise MsaException('Vdisk "%s" exists, cannot create' %
+                                   conf['name'])
 
             self._create_vdisk(**conf)
             self._vdisks.append(VDisk(conf['name'], conf['controller']))
- 
+
     def create_volumes(self, vdname, volconfs):
         vdisk = self.find_vdisk(vdname)
         if vdisk is None:
@@ -296,11 +305,16 @@ if __name__ == '__main__':
 
     msa = MSA2000(host)
     msa.delete_volumes('vd9', ['vd9_001'])
-    msa.create_volumes('vd9', [
-        {'name': 'vd9_001', 'size': '599.5GB', 'access': 'rw', 
-         'lun': '9', 'ports':'a1,a2,b1,b2'}],)
+    msa.create_volumes(
+        'vd9',
+        [{
+            'name': 'vd9_001',
+            'size': '599.5GB',
+            'access': 'rw',
+            'lun': '9',
+            'ports': 'a1,a2,b1,b2'
+        }], )
 
     print(msa)
 
     msa.exit()
-
