@@ -287,6 +287,13 @@ class MSA2000(telnetlib.Telnet, object):
             self._create_volume(vdname, **conf)
             vdisk.add_volume(Volume(**conf))
 
+    def restart(self, controllers=['sc', 'mc']):
+        ''' restart controllers '''
+        if 'sc' in controllers:
+            self._run('restart sc both', True)
+        if 'mc' in controllers:
+            self._run('restart mc both', True)
+
     def exit(self):
         self._send('exit')
 
@@ -304,17 +311,17 @@ if __name__ == '__main__':
         host = 'msa001'
 
     msa = MSA2000(host)
-    msa.delete_volumes('vd9', ['vd9_001'])
-    msa.create_volumes(
-        'vd9',
-        [{
-            'name': 'vd9_001',
-            'size': '599.5GB',
-            'access': 'rw',
-            'lun': '9',
-            'ports': 'a1,a2,b1,b2'
-        }], )
-
+#    msa.delete_volumes('vd9', ['vd9_001'])
+#    msa.create_volumes(
+#        'vd9',
+#        [{
+#            'name': 'vd9_001',
+#            'size': '599.5GB',
+#            'access': 'rw',
+#            'lun': '9',
+#            'ports': 'a1,a2,b1,b2'
+#        }], )
+#
     print(msa)
 
     msa.exit()
