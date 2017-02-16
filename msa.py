@@ -105,8 +105,8 @@ class MSA2000(telnetlib.Telnet, object):
     def _error(self, msg):
         raise MsaException('%s [ %s ]' % (msg, self._host))
 
-    def _send(self, msg):
-        if __debug__:
+    def _send(self, msg, echo=False):
+        if __debug__ or echo:
             print('Send:', msg)
 
         self.write(msg + '\n')
@@ -134,10 +134,7 @@ class MSA2000(telnetlib.Telnet, object):
         self._run('set cli-parameters api pager off brief on timeout 3600')
 
     def _run(self, cmd, echo=False):
-        if echo:
-            print('Running "%s" ...' % cmd)
-
-        self._send(cmd)
+        self._send(cmd, echo)
         output = self._receive()[:-2]  # skip the prompt
         if not output.startswith('<?xml'):
             output = '\n'.join(output.split('\n')[1:])
@@ -292,7 +289,10 @@ class MSA2000(telnetlib.Telnet, object):
         if 'sc' in controllers:
             self._run('restart sc both', True)
         if 'mc' in controllers:
-            self._run('restart mc both', True)
+            try:
+                self._run('restart mc both', True)
+            except Exception as e:
+                print(e)
 
     def exit(self):
         self._send('exit')
