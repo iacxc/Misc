@@ -1,0 +1,23 @@
+#!/usr/bin/python
+
+from __future__ import print_function
+import sys
+
+if len(sys.argv) > 1:
+    fname = sys.argv[1]
+else:
+    fname = 'Passenger.ass'
+
+with file(fname) as ass:
+    count = 1
+    for line in ass:
+        if line.startswith('Dialogue'):
+            st, et, txt = line.strip(). \
+                          replace('Dialogue: 0,', ''). \
+                          replace(',Default,,0,0,0,', ''). \
+                          split(',', 2)
+            print(count)
+            print(st, '-->', et)
+            print(txt)
+            print()
+            count += 1
