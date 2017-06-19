@@ -220,15 +220,15 @@ class Database(object):
         """ _runsql a query, return generator of Rows """
         result = self._runsql(sqlstr, *params)
 
-        return {'fields': [desc[0] for desc in result.description],
-                'rows': result.fetchall()}
+        return ([desc[0] for desc in result.description],
+                result.fetchall())
 
     def getone(self, sqlstr, *params):
         """ execute a query, return the first row """
         result = self._runsql(sqlstr, *params)
 
-        return {'fields': [desc[0] for desc in result.description],
-                'row': result.fetchone()}
+        return ([desc[0] for desc in result.description],
+                result.fetchone())
 
     def dumpdata(self, table=None, sql=None, *params):
         if table is None and sql is None:
@@ -259,3 +259,23 @@ class Database(object):
             writer = csv.writer(csvfile)
             for row in result.fetchall():
                 writer.writerow(row)
+
+
+class WMSSystem(object):
+    def __init__(self, options):
+        try:
+            import jdbc
+            self.__db = jdbc.get_connection(
+                           'jdbc:hpt4jdbc://%s:18650' % options.server, options)
+        except ImportError:
+            import odbc
+            self.__db = odbc.get_connection(options)
+
+
+    def run_cmd(self, cmd):
+        cursor = self.__db.cursor()
+        cursor.execute("WMSOPEN")
+        cursor.execute(cmd)
+
+        return ([desc[0] for desc in cursor.description],
+                cursor.fetchall())
