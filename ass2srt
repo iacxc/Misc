@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from __future__ import print_function
+import re
 import sys
 
 if len(sys.argv) > 1:
@@ -15,9 +16,13 @@ with file(fname) as ass:
             st, et, txt = line.strip(). \
                           replace('Dialogue: 0,', ''). \
                           replace(',Default,,0,0,0,', ''). \
+                          replace(',Default,,0000,0000,0000,', ''). \
+                          replace('{\\r}', '\n'). \
+                          replace('\\N', ''). \
                           split(',', 2)
             print(count)
             print(st, '-->', et)
+            txt = re.sub(r'{\\fn.*}', '', txt)
             print(txt)
             print()
             count += 1
