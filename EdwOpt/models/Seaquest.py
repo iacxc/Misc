@@ -21,6 +21,7 @@ TIME      = 92
 TIMESTAMP = 93
 
 def ft_text(ft):
+    """ return the string for a field type """
     fieldtype = {TINYINT: 'INTEGER',
                  SMALLINT: 'INTEGER',
                  INTEGER: 'INTEGER',
@@ -35,7 +36,7 @@ def ft_text(ft):
                  NUMERIC: 'DOUBLE',
     }
     return fieldtype[ft]
- 
+
 
 class Table(object):
     def __init__(self, catname, schname, tname, ddl=None):
@@ -122,7 +123,8 @@ class Database(object):
         try:
             import jdbc
             self.__db = jdbc.get_connection(
-                           'jdbc:hpt4jdbc://%s:18650' % options.server, options)
+                           'jdbc:hpt4jdbc://%s:%d' % (options.server, options.port), 
+                           options)
             self.get_tables = jdbc.get_tables
             self.get_columns = jdbc.get_columns
         except ImportError:
@@ -262,44 +264,23 @@ class Database(object):
 
     def get_partitions(self, tablename):
         """ get partitions for a table """
-        query_text = \
-"""SELECT TRIM(CATALOG_NAME) AS CATALOG_NAME,
-          TRIM(SCHEMA_NAME) AS SCHEMA_NAME,
-          TRIM(OBJECT_NAME) AS OBJECT_NAME,
-          TRIM(PARTITION_NAME) AS PARTITION_NAME,
-          PARTITION_NUM,
-          ROW_COUNT,
-          INSERTED_ROW_COUNT,
-          DELETED_ROW_COUNT,
-          UPDATED_ROW_COUNT,
-          PRIMARY_EXTENTS,
-          SECONDARY_EXTENTS,
-          MAX_EXTENTS,
-          ALLOCATED_EXTENTS,
-          (PRIMARY_EXTENTS + (SECONDARY_EXTENTS * (MAX_EXTENTS -1))) * 2048 AS MAX_SIZE,
-          CURRENT_EOF,
-          COMPRESSION_TYPE,
-          COMPRESSED_EOF_SECTORS,
-          COMPRESSION_RATIO,
-          RFORK_EOF,
-          ACCESS_COUNTER 
-FROM TABLE(DISK LABEL STATISTICS({0})) 
-ORDER BY PARTITION_NUM FOR READ UNCOMMITTED ACCESS
-""".format(tablename)
-        return self.getall(query_text)
+        return self.getall(sqlstmt.get_partitions(tablename))
+
 
 class WMSSystem(object):
+    """ Wms System """
     def __init__(self, options):
         try:
             import jdbc
             self.__db = jdbc.get_connection(
-                           'jdbc:hpt4jdbc://%s:18650' % options.server, options)
+                'jdbc:hpt4jdbc://%s:%d' % (options.server, options.port), 
+                options)
         except ImportError:
             import odbc
             self.__db = odbc.get_connection(options)
 
-
     def run_cmd(self, cmd):
+        """ run a WMS command """
         cursor = self.__db.cursor()
         cursor.execute("WMSOPEN")
         cursor.execute(cmd)

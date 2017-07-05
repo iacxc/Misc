@@ -25,6 +25,7 @@ if __name__ == "__main__":
 
     parser.add_option("--dsn",  default="Admin_Load_DataSource" )
     parser.add_option("--server")
+    parser.add_option("--port", type=int)
 
     parser.add_option("--table",  help="table name")
     parser.add_option("--sql",  help="sql statement")
