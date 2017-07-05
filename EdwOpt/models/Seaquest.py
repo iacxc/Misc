@@ -267,23 +267,26 @@ class Database(object):
         return self.getall(sqlstmt.get_partitions(tablename))
 
 
-class WMSSystem(object):
+class WMSSystem(Database):
     """ Wms System """
-    def __init__(self, options):
-        try:
-            import jdbc
-            self.__db = jdbc.get_connection(
-                'jdbc:hpt4jdbc://%s:%d' % (options.server, options.port), 
-                options)
-        except ImportError:
-            import odbc
-            self.__db = odbc.get_connection(options)
+    def __init__(self, options, debug=True):
+        super(WMSSystem, self).__init__(options, debug)
+
+    def cursor(self):
+        cursor = super(WMSSystem, self).cursor()
+        cursor.execute("WMSOPEN")
+
+        return cursor
 
     def run_cmd(self, cmd):
         """ run a WMS command """
-        cursor = self.__db.cursor()
-        cursor.execute("WMSOPEN")
-        cursor.execute(cmd)
+        self._runsql(cmd)
 
-        return ([desc[0] for desc in cursor.description],
-                cursor.fetchall())
+    def status_query(self, queryid=None):
+        """ get the status of a query/all queries """
+        if queryid is None:
+            query_text = "STATUS QUERIES ALL MERGED"
+            return self.getall(query_text)
+        else:
+            query_text = "STATUS QUERY {0} MERGED".format(queryid)
+            return self.getone(query_text)
