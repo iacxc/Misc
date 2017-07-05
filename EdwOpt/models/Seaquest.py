@@ -260,6 +260,33 @@ class Database(object):
             for row in result.fetchall():
                 writer.writerow(row)
 
+    def get_partitions(self, tablename):
+        """ get partitions for a table """
+        query_text = \
+"""SELECT TRIM(CATALOG_NAME) AS CATALOG_NAME,
+          TRIM(SCHEMA_NAME) AS SCHEMA_NAME,
+          TRIM(OBJECT_NAME) AS OBJECT_NAME,
+          TRIM(PARTITION_NAME) AS PARTITION_NAME,
+          PARTITION_NUM,
+          ROW_COUNT,
+          INSERTED_ROW_COUNT,
+          DELETED_ROW_COUNT,
+          UPDATED_ROW_COUNT,
+          PRIMARY_EXTENTS,
+          SECONDARY_EXTENTS,
+          MAX_EXTENTS,
+          ALLOCATED_EXTENTS,
+          (PRIMARY_EXTENTS + (SECONDARY_EXTENTS * (MAX_EXTENTS -1))) * 2048 AS MAX_SIZE,
+          CURRENT_EOF,
+          COMPRESSION_TYPE,
+          COMPRESSED_EOF_SECTORS,
+          COMPRESSION_RATIO,
+          RFORK_EOF,
+          ACCESS_COUNTER 
+FROM TABLE(DISK LABEL STATISTICS({0})) 
+ORDER BY PARTITION_NUM FOR READ UNCOMMITTED ACCESS
+""".format(tablename)
+        return self.getall(query_text)
 
 class WMSSystem(object):
     def __init__(self, options):
