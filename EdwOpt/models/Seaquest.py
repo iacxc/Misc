@@ -1,41 +1,48 @@
+"""
+   Seaquest.py
+"""
+
 from __future__ import print_function
 
 import csv
 
+from Common import make_enum
 import sqlstmt
 
 
-NVARCHAR  = -9
-WCHAR     = -8
-TINYINT   = -6
-BIGINT    = -5
-CHAR      = 1
-NUMERIC   = 2
-INTEGER   = 4
-SMALLINT  = 5
-FLOAE     = 6
-DOUBLE    = 8
-VARCHAR   = 12
-DATE      = 91
-TIME      = 92
-TIMESTAMP = 93
+DATATYPE = make_enum('DATATYPE',
+                     NVARCHAR=-9,
+                     WCHAR=-8,
+                     TINYINT=-6,
+                     BIGINT=-5,
+                     CHAR=1,
+                     NUMERIC=2,
+                     INTEGER=4,
+                     SMALLINT=5,
+                     FLOAE=6,
+                     DOUBLE=8,
+                     VARCHAR=12,
+                     DATE=91,
+                     TIME=92,
+                     TIMESTAMP=93,
+                     )
+
 
 def ft_text(ft):
     """ return the string for a field type """
-    fieldtype = {TINYINT: 'INTEGER',
-                 SMALLINT: 'INTEGER',
-                 INTEGER: 'INTEGER',
-                 BIGINT: 'BIGINT',
-                 DATE: 'TIMESTAMP',
-                 TIME: 'TIMESTAMP',
-                 TIMESTAMP: 'TIMESTAMP',
-                 CHAR: 'CHAR',
-                 WCHAR: 'CHAR',
-                 NVARCHAR: 'VARCHAR',
-                 VARCHAR: 'VARCHAR',
-                 NUMERIC: 'DOUBLE',
-    }
-    return fieldtype[ft]
+    return {DATATYPE.TINYINT: 'INTEGER',
+            DATATYPE.SMALLINT: 'INTEGER',
+            DATATYPE.INTEGER: 'INTEGER',
+            DATATYPE.BIGINT: 'BIGINT',
+            DATATYPE.DATE: 'TIMESTAMP',
+            DATATYPE.TIME: 'TIMESTAMP',
+            DATATYPE.TIMESTAMP: 'TIMESTAMP',
+            DATATYPE.CHAR: 'CHAR',
+            DATATYPE.WCHAR: 'CHAR',
+            DATATYPE.NVARCHAR: 'VARCHAR',
+            DATATYPE.VARCHAR: 'VARCHAR',
+            DATATYPE.NUMERIC: 'DOUBLE',
+            }.get(ft)
 
 
 class Table(object):
@@ -121,14 +128,14 @@ class Catalog(object):
 class Database(object):
     def __init__(self, options, debug=True):
         try:
-            import jdbc
+            jdbc = __import__('jdbc')
             self.__db = jdbc.get_connection(
                            'jdbc:hpt4jdbc://%s:%d' % (options.server, options.port), 
                            options)
             self.get_tables = jdbc.get_tables
             self.get_columns = jdbc.get_columns
         except ImportError:
-            import odbc
+            odbc = __import__('odbc')
             self.__db = odbc.get_connection(options)
             self.get_tables = odbc.get_tables
             self.get_columns = odbc.get_columns
@@ -172,9 +179,9 @@ class Database(object):
 
             # get all tables for catalog
             cursch = None
-            for row in self.get_tables(self.cursor(), catname):
-                schname = row[1]
-                tablename = row[2]
+            for r in self.get_tables(self.cursor(), catname):
+                schname = r[1]
+                tablename = r[2]
                 if cursch is None or cursch.name != schname:
                     if cursch:
                         cat.add_schema(cursch)
@@ -245,7 +252,7 @@ class Database(object):
         if table is None:
             table = 'TABLE'
 
-        with file('%s.sql' % table, 'wb') as ddlfile:
+        with open('%s.sql' % table, 'wb') as ddlfile:
             ddlfile.write("CREATE TABLE %s(\n" % table)
             firstfield = True
             for desc in result.description:
@@ -257,36 +264,60 @@ class Database(object):
 
             ddlfile.write(");\n")
 
-        with file('%s.csv' % table, 'wb') as csvfile:
+        with open('%s.csv' % table, 'wb') as csvfile:
             writer = csv.writer(csvfile)
             for row in result.fetchall():
                 writer.writerow(row)
 
-    def get_partitions(self, tablename):
+    def get_table_files(self, catalog, schema=None, table=None):
+        return self.getall(sqlstmt.get_table_files(catalog, schema, table))
+
+    def get_table_partitions(self, *params):
         """ get partitions for a table """
-        return self.getall(sqlstmt.get_partitions(tablename))
+        return self.getall(sqlstmt.get_table_partitions(*params))
+
+    def get_single_partition_objs(self, catalog):
+        return self.getall(sqlstmt.get_single_partition_objs(catalog))
+
+
+WMSCOMMAND = make_enum('WMSCOMMAND',
+                       OPENWMS='WMSOPEN',
+                       STATUS_WMS='STATUS WMS',
+                       STATUS_QUERY_ALL='STATUS QUERIES ALL MERGED',
+                       STATUS_QUERY='STATUS QUERY {0} MERGED',
+                       STATUS_SERVICE='STATUS SERVICE {0}',
+                       STATUS_RULE='STATUS RULE {0}',
+                       )
 
 
 class WMSSystem(Database):
-    """ Wms System """
+    """ WMS System """
     def __init__(self, options, debug=True):
+        """ init """
         super(WMSSystem, self).__init__(options, debug)
 
     def cursor(self):
         cursor = super(WMSSystem, self).cursor()
-        cursor.execute("WMSOPEN")
+        cursor.execute(WMSCOMMAND.OPENWMS)
 
         return cursor
 
-    def run_cmd(self, cmd):
-        """ run a WMS command """
-        self._runsql(cmd)
+    def status(self):
+        """ get the status of wms system """
+        return self.getone(WMSCOMMAND.STATUS_WMS)
 
     def status_query(self, queryid=None):
         """ get the status of a query/all queries """
-        if queryid is None:
-            query_text = "STATUS QUERIES ALL MERGED"
-            return self.getall(query_text)
-        else:
-            query_text = "STATUS QUERY {0} MERGED".format(queryid)
-            return self.getone(query_text)
+        return self.getall(WMSCOMMAND.STATUS_QUERY_ALL) if queryid is None \
+            else self.getall(WMSCOMMAND.STATUS_QUERY.format(queryid))
+
+    def status_service(self, service_name=None):
+        """ get the status of services """
+        return self.getall(WMSCOMMAND.STATUS_SERVICE.format(
+            'ALL' if service_name is None else service_name))
+
+    def status_rule(self, rule_name=None):
+        """ get the status of services """
+        return self.getall(WMSCOMMAND.STATUS_RULE.format(
+            'ALL' if rule_name is None else rule_name))
+

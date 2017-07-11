@@ -4,16 +4,17 @@ from __future__ import print_function
 def get_all_catalogs():
     return """
 SELECT trim(cat_name)
-    FROM hp_system_catalog.system_schema.catsys
+FROM hp_system_catalog.system_schema.catsys
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE"""
 
 
 def get_all_schemas():
     return """
-SELECT trim(c.cat_name) || '.' || trim(s.schema_name)
-    FROM hp_system_catalog.system_schema.schemata s,
-         hp_system_catalog.system_schema.catsys c
-    WHERE c.CAT_UID = s.CAT_UID
+SELECT trim(c.cat_name) as catalog_name, 
+       trim(s.schema_name) as schema_name
+FROM hp_system_catalog.system_schema.schemata s,
+     hp_system_catalog.system_schema.catsys c
+WHERE c.CAT_UID = s.CAT_UID
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE"""
 
 
@@ -29,7 +30,8 @@ WHERE s.cat_uid = c.cat_uid
 
 def get_tables(catalog):
     return """
-SELECT trim(s.schema_name) || '.' || trim(o.object_name)
+SELECT trim(s.schema_name) as schema_name, 
+       trim(o.object_name) as table_name
 FROM {catalog}.hp_definition_schema.objects o,
     hp_system_catalog.system_schema.schemata s
 WHERE o.schema_uid = s.schema_uid
@@ -38,7 +40,40 @@ WHERE o.schema_uid = s.schema_uid
     AND o.object_type = 'BT'
 FOR READ UNCOMMITTED ACCESS IN SHARE MODE""".format(catalog=catalog)
 
-def get_partitions(tablename):
+
+def get_table_files(catalog, schema=None, table=None):
+    return """
+    SELECT trim(s.schema_name) as schema_name, 
+           trim(o.object_name) as table_name, 
+           trim(p.data_source) || '.' || trim(p.file_suffix) as file_name
+    FROM {catalog}.hp_definition_schema.objects o
+         LEFT JOIN {catalog}.hp_definition_schema.partitions p
+                    ON o.object_uid = p.object_uid
+         LEFT JOIN hp_system_catalog.system_schema.schemata s
+                    ON o.schema_uid = s.schema_uid
+    WHERE o.object_security_class = 'UT'
+           and o.object_type = 'BT'
+           and o.object_name_space = 'TA'""".format(catalog=catalog) +\
+           (" and s.schema_name ='{0}'".format(schema) if schema else "") +\
+           (" and o.object_name ='{0}'".format(table) if table else "") +\
+    """ ORDER BY s.schema_name, o.object_name, p.data_source
+    FOR READ UNCOMMITTED ACCESS IN SHARE MODE""".format(catalog=catalog)
+
+
+def get_single_partition_objs(catalog):
+    return """
+SELECT o.OBJECT_UID, TRIM(o.OBJECT_NAME) as OBJECT_NAME, 
+       o.OBJECT_NAME_SPACE, o.OBJECT_TYPE 
+FROM
+    (SELECT object_uid 
+     FROM {catalog}.HP_DEFINITION_SCHEMA.PARTITIONS 
+     HAVING count(*) = 1 
+     GROUP by 1) AS ou
+     LEFT JOIN {catalog}.hp_definition_schema.objects o
+          ON ou.object_uid = o.object_uid""".format(catalog=catalog)
+
+
+def get_table_partitions(*params):
     return """
 SELECT TRIM(CATALOG_NAME) AS CATALOG_NAME,
        TRIM(SCHEMA_NAME) AS SCHEMA_NAME,
@@ -62,9 +97,11 @@ SELECT TRIM(CATALOG_NAME) AS CATALOG_NAME,
        ACCESS_COUNTER 
 FROM TABLE(DISK LABEL STATISTICS({tablename})) 
 ORDER BY PARTITION_NUM FOR READ UNCOMMITTED ACCESS
-""".format(tablename=tablename)
- 
+""".format(tablename=".".join(params))
+
+
 def get_cols(catalog, table):
+    """ columns for a table """
     return """
 SELECT o.object_name, c.column_name, c.fs_data_type
 FROM {catalog}.hp_definition_schema.objects o,
