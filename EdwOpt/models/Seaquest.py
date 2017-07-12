@@ -302,9 +302,9 @@ class WMSSystem(Database):
 
         return cursor
 
-    def status(self):
+    def status(self, *args):
         """ get the status of wms system """
-        return self.getone(WMSCOMMAND.STATUS_WMS)
+        return self.getall(WMSCOMMAND.STATUS_WMS)
 
     def status_query(self, queryid=None):
         """ get the status of a query/all queries """
