@@ -1,9 +1,11 @@
 
 from __future__ import print_function
 
+import threading
+from _winreg import HKEY_CURRENT_USER, OpenKey, EnumValue
 import wx
 
-from _winreg import HKEY_CURRENT_USER, OpenKey, EnumValue
+
 from controls import SqlEditor, DataGrid, ProgressStatusBar
 from models import Seaquest
 import resource as R
@@ -36,6 +38,25 @@ def create_button(parent, id, label, handler):
     return button
 
 
+class DataThread(threading.Thread):
+    def __init__(self, window, func, *args):
+        super(DataThread, self).__init__()
+
+        self.daemon = True
+
+        self.window = window
+        self.func = func
+        self.args = args
+
+    def run(self):
+        try:
+            fields, rows = self.func(*self.args)
+            wx.CallAfter(self.window.StopQuery, fields, rows)
+        except Exception as exp:
+            wx.MessageBox(str(exp), "Error fetching data", wx.OK)
+            wx.CallAfter(self.window.StopQuery)
+
+
 class DataFrame(wx.MDIChildFrame):
     """ """
     func_list = ('raw query',
@@ -66,17 +87,27 @@ class DataFrame(wx.MDIChildFrame):
 
     @property
     def connection(self):
-        if self.__conn is None:
-            self.__conn = get_connection(self.conn_option)
+        try:
+            if self.__conn is None:
+                self.__conn = get_connection(self.conn_option)
+        except Exception as exp:
+            wx.MessageBox(str(exp), "Error connecting to database", wx.OK)
+
         return self.__conn
 
     @property
     def database(self):
-        return Seaquest.Database(self.connection, False)
+        if self.connection is None:
+            return None
+        else:
+            return Seaquest.Database(self.connection, False)
 
     @property
     def wms(self):
-        return Seaquest.WMSSystem(self.connection, False)
+        if self.connection is None:
+            return None
+        else:
+            return Seaquest.WMSSystem(self.connection, False)
 
     def initUI(self):
         panel = wx.Panel(self)
@@ -85,7 +116,8 @@ class DataFrame(wx.MDIChildFrame):
         self.selDSN = wx.ComboBox(panel, 0, "sqws114",
                                   choices=get_odbc_datasources())
         self.txtUID = wx.TextCtrl(panel, value=R.Value.DEF_USER)
-        self.txtPWD = wx.TextCtrl(panel, value=R.Value.DEF_PASSWORD)
+        self.txtPWD = wx.TextCtrl(panel, value=R.Value.DEF_PASSWORD,
+                                  style=wx.TE_PASSWORD)
         self.selFuncs = wx.ComboBox(panel, 0, self.func_list[0],
                                     choices=self.func_list)
         self.txtQuery = SqlEditor(panel)
@@ -157,6 +189,15 @@ class DataFrame(wx.MDIChildFrame):
     def UpdateStatus(self, msg):
         self.SetStatusText(msg)
 
+    def StartQuery(self):
+        self.statusbar.StartBusy()
+
+    def StopQuery(self, fields=None, rows=None):
+        self.UpdateStatus('Done')
+        if fields is not None:
+            self.datagrid.RefreshData(fields, rows)
+        self.statusbar.StopBusy()
+
     def OnSelDsnClicked(self, event):
         self.__conn = None
 
@@ -174,30 +215,31 @@ class DataFrame(wx.MDIChildFrame):
 
     def OnBtnRun(self, event):
         event_id = event.GetId()
-        self.statusbar.StartBusy()
-        try:
-            self.SetStatusText('Connecting ...')
-            dbobj = {R.Id.ID_QUERY: self.database,
-                     R.Id.ID_WMS: self.wms
-                     }.get(event_id)
+        self.StartQuery()
 
-            self.SetStatusText('Querying ...')
-            func_name = self.selFuncs.GetValue()
-            if '::' in func_name:
-                func_name = func_name.split('::')[1]
-                func = getattr(dbobj, func_name)
-                params = self.txtQuery.GetValue().strip().split()
-                fields, rows = func(*params)
-            else:
-                query = self.txtQuery.GetValue().strip()
-                fields, rows = dbobj.getall(query)
+        self.UpdateStatus('Connecting ...')
+        if event_id == R.Id.ID_QUERY:
+            dbobj = self.database
+        else: # R.Id.ID_WMS
+            dbobj = self.wms
 
-            self.datagrid.RefreshData(fields, rows)
-        except Exception as exp:
-            wx.MessageBox(str(exp), "Error", wx.OK)
+        if dbobj is None:
+            self.StopQuery()
+            return
 
-        self.SetStatusText('Done')
-        self.statusbar.StopBusy()
+        self.UpdateStatus('Querying ...')
+        func_name = self.selFuncs.GetValue()
+        if '::' in func_name:
+            func_name = func_name.split('::')[1]
+            func = getattr(dbobj, func_name)
+            params = self.txtQuery.GetValue().strip().split()
+            task = DataThread(self, func, *params)
+
+        else:
+            query = self.txtQuery.GetValue().strip()
+            task = DataThread(self, dbobj.getall, query)
+
+        task.start()
 
     def OnTry(self, event):
         self.statusbar.StartBusy()
