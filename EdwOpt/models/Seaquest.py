@@ -126,19 +126,8 @@ class Catalog(object):
 
 
 class Database(object):
-    def __init__(self, options, debug=True):
-        try:
-            jdbc = __import__('jdbc')
-            self.__db = jdbc.get_connection(
-                           'jdbc:hpt4jdbc://%s:%d' % (options.server, options.port), 
-                           options)
-            self.get_tables = jdbc.get_tables
-            self.get_columns = jdbc.get_columns
-        except ImportError:
-            odbc = __import__('odbc')
-            self.__db = odbc.get_connection(options)
-            self.get_tables = odbc.get_tables
-            self.get_columns = odbc.get_columns
+    def __init__(self, connection, debug=True):
+        self.__conn = connection
 
         self.__debug = debug
         self.__catalogs = []
@@ -147,8 +136,6 @@ class Database(object):
     def catalogs(self):
         return self.__catalogs
 
-    def cursor(self):
-        return self.__db.cursor()
 
     def add_catalog(self, catalog):
         self.__catalogs.append(catalog)
@@ -157,29 +144,38 @@ class Database(object):
         if __debug__ and self.__debug:
                 print(msg)
 
-    def _runsql(self, sqlstr, *params):
-        """ run a sql, return the cursor """
-        self.log_debug(sqlstr)
-        self.log_debug(params)
-
-        cursor = self.cursor()
-        cursor.execute(sqlstr, params)
+    def runsql(self, sqlstr, *params):
+        cursor = self.__conn.cursor()
+        cursor.execute(sqlstr, *params)
 
         return cursor
+
+    def getone(self, sqlstr, *params):
+        """ execute a query, return the first row """
+        cursor = self.runsql(sqlstr, *params)
+
+        return ([desc[0] for desc in cursor.description],
+                cursor.fetchone())
+
+    def getall(self, sqlstr, *params):
+        cursor = self.runsql(sqlstr, *params)
+
+        return ([desc[0] for desc in cursor.description],
+                cursor.fetchall())
 
     def _fill_struct(self):
         if len(self.catalogs) > 0:   # prevent doing it twice
             return
 
         # first get all catalogs and schemas
-        result = self._runsql(sqlstmt.get_all_catalogs())
-        for row in result.fetchall():
+        fields, rows = self.getall(sqlstmt.get_all_catalogs())
+        for row in rows:
             catname = row[0]
             cat = Catalog(catname)
 
             # get all tables for catalog
             cursch = None
-            for r in self.get_tables(self.cursor(), catname):
+            for r in self.__conn.get_tables(catname):
                 schname = r[1]
                 tablename = r[2]
                 if cursch is None or cursch.name != schname:
@@ -210,7 +206,7 @@ class Database(object):
         self.log_debug('%s.%s.%s' % (catalog, schema, table))
         ddl = ["CREATE TABLE %s(" % table]
         firstfield = True
-        for row in self.get_columns(self.cursor(), catalog, schema, table):
+        for row in self.__conn.get_columns(catalog, schema, table):
             if firstfield:
                 ddl.append("    %s %s" % (row[3].strip(), ft_text(row[4])))
                 firstfield = False
@@ -225,20 +221,6 @@ class Database(object):
         if len(ddl) > 2:
             return "\n".join(ddl)
 
-    def getall(self, sqlstr, *params):
-        """ _runsql a query, return generator of Rows """
-        result = self._runsql(sqlstr, *params)
-
-        return ([desc[0] for desc in result.description],
-                result.fetchall())
-
-    def getone(self, sqlstr, *params):
-        """ execute a query, return the first row """
-        result = self._runsql(sqlstr, *params)
-
-        return ([desc[0] for desc in result.description],
-                result.fetchone())
-
     def dumpdata(self, table=None, sql=None, *params):
         if table is None and sql is None:
             return
@@ -247,7 +229,7 @@ class Database(object):
             sql = "SELECT * FROM %s" % table
             params = []
         
-        result = self._runsql(sql, *params)
+        cursor = self.runsql(sql, *params)
 
         if table is None:
             table = 'TABLE'
@@ -255,7 +237,7 @@ class Database(object):
         with open('%s.sql' % table, 'wb') as ddlfile:
             ddlfile.write("CREATE TABLE %s(\n" % table)
             firstfield = True
-            for desc in result.description:
+            for desc in cursor.description:
                 if firstfield:
                     ddlfile.write("    %s %s\n" % (desc[0], ft_text(desc[1])))
                     firstfield = False
@@ -266,7 +248,7 @@ class Database(object):
 
         with open('%s.csv' % table, 'wb') as csvfile:
             writer = csv.writer(csvfile)
-            for row in result.fetchall():
+            for row in cursor.fetchall():
                 writer.writerow(row)
 
     def get_table_files(self, catalog, schema=None, table=None):
@@ -290,17 +272,31 @@ WMSCOMMAND = make_enum('WMSCOMMAND',
                        )
 
 
-class WMSSystem(Database):
+class WMSSystem(object):
     """ WMS System """
-    def __init__(self, options, debug=True):
+    def __init__(self, connection, debug=True):
         """ init """
-        super(WMSSystem, self).__init__(options, debug)
+        self.__conn = connection
 
-    def cursor(self):
-        cursor = super(WMSSystem, self).cursor()
+    def runsql(self, sqlstr, *params):
+        cursor = self.__conn.cursor()
         cursor.execute(WMSCOMMAND.OPENWMS)
+        cursor.execute(sqlstr, *params)
 
         return cursor
+
+    def getone(self, sqlstr, *params):
+        """ execute a query, return the first row """
+        cursor = self.runsql(sqlstr, *params)
+
+        return ([desc[0] for desc in cursor.description],
+                cursor.fetchone())
+
+    def getall(self, sqlstr, *params):
+        cursor = self.runsql(sqlstr, *params)
+
+        return ([desc[0] for desc in cursor.description],
+                cursor.fetchall())
 
     def status(self, *args):
         """ get the status of wms system """

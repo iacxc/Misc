@@ -4,16 +4,14 @@ from __future__ import print_function
 import wx
 
 from _winreg import HKEY_CURRENT_USER, OpenKey, EnumValue
-from controls import SqlEditor, DataGrid
+from controls import SqlEditor, DataGrid, ProgressStatusBar
 from models import Seaquest
 import resource as R
 
 
-class ConnOpt(object):
-    def __init__(self, dsn, uid, pwd):
-        self.dsn = dsn
-        self.user = uid
-        self.password = pwd
+def get_connection(options):
+    import odbc
+    return odbc.get_connection(options)
 
 
 def get_odbc_datasources():
@@ -31,150 +29,178 @@ def get_odbc_datasources():
     return dsn_list
 
 
-def create_button(parent, label, handler):
-    button = wx.Button(parent, label=label)
+def create_button(parent, id, label, handler):
+    button = wx.Button(parent, id, label)
     button.Bind(wx.EVT_BUTTON, handler)
 
     return button
 
 
-
 class DataFrame(wx.MDIChildFrame):
     """ """
     func_list = ('raw query',
-                 'db:get_table_partitions',
-                 'db:get_table_files',
-                 'db:get_single_partition_objs',
-                 'wms:status', 'wms:status_query',
-                 'wms:status_service', 'wms:status_rule')
+                 'db::get_table_partitions',
+                 'db::get_table_files',
+                 'db::get_single_partition_objs',
+                 'wms::status',
+                 'wms::status_query',
+                 'wms::status_service',
+                 'wms::status_rule')
 
     def __init__(self, parent, title):
         super(DataFrame, self).__init__(parent, title=title)
 
         self.initUI()
+        self.__conn = None
+
+    @property
+    def conn_option(self):
+        class ConnOpt(object): pass
+
+        opt = ConnOpt()
+        opt.dsn = self.selDSN.GetValue()
+        opt.user = self.txtUID.GetValue()
+        opt.password = self.txtPWD.GetValue()
+
+        return opt
+
+    @property
+    def connection(self):
+        if self.__conn is None:
+            self.__conn = get_connection(self.conn_option)
+        return self.__conn
+
+    @property
+    def database(self):
+        return Seaquest.Database(self.connection, False)
+
+    @property
+    def wms(self):
+        return Seaquest.WMSSystem(self.connection, False)
 
     def initUI(self):
         panel = wx.Panel(self)
 
-        self.selDSN = wx.ComboBox(panel, -1, 'sqws114',
+        # controls
+        self.selDSN = wx.ComboBox(panel, 0, "sqws114",
                                   choices=get_odbc_datasources())
         self.txtUID = wx.TextCtrl(panel, value=R.Value.DEF_USER)
         self.txtPWD = wx.TextCtrl(panel, value=R.Value.DEF_PASSWORD)
-        self.selFuncs = wx.ComboBox(panel, -1, self.func_list[0],
-                                    choices=self.func_list,
-                                    style=wx.CB_DROPDOWN)
-        self.txtParams = wx.TextCtrl(panel)
+        self.selFuncs = wx.ComboBox(panel, 0, self.func_list[0],
+                                    choices=self.func_list)
         self.txtQuery = SqlEditor(panel)
 
-        self.datagrid = DataGrid(panel)
+        self.btnQuery = create_button(panel, R.Id.ID_QUERY,
+                                      R.String.QUERY, self.OnBtnRun)
+        self.btnWms = create_button(panel, R.Id.ID_WMS,
+                                    R.String.WMS, self.OnBtnRun)
 
-        self.btnRun = create_button(panel, R.String.QUERY, self.OnBtnRun)
-        self.btnWms = create_button(panel, R.String.WMS, self.OnBtnWms)
+        self.datagrid = DataGrid(panel)
 
         # main sizer
         msizer = wx.BoxSizer(wx.VERTICAL)
 
-        hbox1 = wx.BoxSizer(wx.HORIZONTAL)
+        hbox1 = wx.StaticBoxSizer(
+            wx.StaticBox(panel, label=R.String.LABEL_CONNINFO), wx.HORIZONTAL)
 
         hbox1.Add(wx.StaticText(panel, label=R.String.LABEL_DSN),
-                  flag=wx.ALL|wx.ALIGN_CENTER_VERTICAL,
+                  flag=wx.TOP|wx.RIGHT|wx.BOTTOM|wx.ALIGN_CENTER_VERTICAL,
                   border=R.Value.BORDER)
-        hbox1.Add(self.selDSN, 1, wx.EXPAND|wx.ALL, border=R.Value.BORDER)
-
+        hbox1.Add(self.selDSN, 1, wx.ALL, border=R.Value.BORDER)
         hbox1.Add(wx.StaticText(panel, label=R.String.LABEL_UID),
                   flag=wx.ALL|wx.ALIGN_CENTER_VERTICAL,
                   border=R.Value.BORDER)
-        hbox1.Add(self.txtUID, 1, wx.EXPAND|wx.ALL, border=R.Value.BORDER)
+        hbox1.Add(self.txtUID, 2, wx.ALL, border=R.Value.BORDER)
         hbox1.Add(wx.StaticText(panel, label=R.String.LABEL_PWD),
                   flag=wx.ALL|wx.ALIGN_CENTER_VERTICAL,
                   border=R.Value.BORDER)
-        hbox1.Add(self.txtPWD, 1, wx.EXPAND|wx.ALL, border=R.Value.BORDER)
+        hbox1.Add(self.txtPWD, 2, wx.ALL, border=R.Value.BORDER)
 
         hbox2 = wx.BoxSizer(wx.HORIZONTAL)
         hbox2.Add(wx.StaticText(panel, label=R.String.LABEL_TESTFUNC),
-                  flag=wx.ALL, border=R.Value.BORDER)
-        hbox2.Add(self.selFuncs, 0, wx.ALL|wx.ALIGN_CENTER_VERTICAL,
+                  flag=wx.ALL|wx.ALIGN_CENTER_VERTICAL, border=R.Value.BORDER)
+        hbox2.Add(self.selFuncs, flag=wx.ALL|wx.ALIGN_CENTER_VERTICAL,
                   border=R.Value.BORDER)
-        hbox2.Add(wx.StaticText(panel, label=R.String.LABEL_PARAMETERS),
-                  flag=wx.ALL|wx.ALIGN_CENTER_VERTICAL,
-                  border=R.Value.BORDER)
-        hbox2.Add(self.txtParams, 1, wx.EXPAND|wx.ALL, border=R.Value.BORDER)
 
         hbox3 = wx.BoxSizer(wx.HORIZONTAL)
-        hbox3.Add(wx.StaticText(panel, label=R.String.LABEL_QUERY),
+        hbox3.Add(wx.StaticText(panel, label=R.String.LABEL_PARAMETERS),
                   flag=wx.ALL, border=R.Value.BORDER)
         hbox3.Add(self.txtQuery, 1, wx.EXPAND|wx.ALL, border=R.Value.BORDER)
 
         btnsizer = wx.BoxSizer(wx.VERTICAL)
 
-        btnsizer.Add(self.btnRun, 0, wx.ALL, border=R.Value.BORDER)
-        btnsizer.Add(self.btnWms, 0, wx.ALL, border=R.Value.BORDER)
+        btnsizer.Add(self.btnQuery, 1, wx.ALL, border=R.Value.BORDER)
+        btnsizer.Add(self.btnWms, 1, wx.ALL, border=R.Value.BORDER)
+
+        btnsizer.Add(create_button(panel, wx.ID_ANY, "Try", self.OnTry),
+                     1, wx.ALL, border=R.Value.BORDER)
 
         hbox3.Add(btnsizer)
 
-        gridbox = wx.StaticBoxSizer(wx.StaticBox(panel))
+        gridbox = wx.StaticBoxSizer(
+            wx.StaticBox(panel, label=R.String.LABEL_OUTPUT))
         gridbox.Add(self.datagrid, 1, wx.EXPAND)
 
-        msizer.Add(hbox1, 0, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,
-                   border=R.Value.BORDER)
-        msizer.Add(hbox2, 0, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,
-                   border=R.Value.BORDER)
-        msizer.Add(hbox3, 0, flag=wx.EXPAND|wx.TOP|wx.LEFT|wx.RIGHT,
-                   border=R.Value.BORDER)
-        msizer.Add(gridbox, 1, wx.EXPAND|wx.ALL, border=R.Value.BORDER)
+        msizer.Add(hbox1, flag=wx.EXPAND|wx.ALL, border=R.Value.BORDER)
+        msizer.Add(hbox2, flag=wx.EXPAND|wx.ALL, border=R.Value.BORDER)
+        msizer.Add(hbox3, flag=wx.EXPAND|wx.ALL, border=R.Value.BORDER)
+        msizer.Add(gridbox, 1, flag=wx.EXPAND|wx.ALL, border=R.Value.BORDER)
 
         panel.SetSizer(msizer)
 
-        self.selFuncs.Bind(wx.EVT_COMBOBOX, self.OnFuncClicked)
+        self.selDSN.Bind(wx.EVT_COMBOBOX, self.OnSelDsnClicked)
+        self.selFuncs.Bind(wx.EVT_COMBOBOX, self.OnSelFuncClicked)
+
+        self.statusbar = ProgressStatusBar(self)
+        self.SetStatusBar(self.statusbar)
+
+    def UpdateStatus(self, msg):
+        self.SetStatusText(msg)
+
+    def OnSelDsnClicked(self, event):
+        self.__conn = None
+
+    def OnSelFuncClicked(self, event):
+        func_name = self.selFuncs.GetValue()
+        if func_name.startswith('db::'):
+            self.btnQuery.Enable()
+            self.btnWms.Disable()
+        elif func_name.startswith('wms::'):
+            self.btnQuery.Disable()
+            self.btnWms.Enable()
+        else:
+            self.btnQuery.Enable()
+            self.btnWms.Enable()
 
     def OnBtnRun(self, event):
-        opts = ConnOpt(self.selDSN.GetValue(),
-                       self.txtUID.GetValue(),
-                       self.txtPWD.GetValue())
+        event_id = event.GetId()
+        self.statusbar.StartBusy()
         try:
-            db = Seaquest.Database(opts)
+            self.SetStatusText('Connecting ...')
+            dbobj = {R.Id.ID_QUERY: self.database,
+                     R.Id.ID_WMS: self.wms
+                     }.get(event_id)
+
+            self.SetStatusText('Querying ...')
             func_name = self.selFuncs.GetValue()
-            if func_name.startswith('db:'):
-                func = getattr(db, func_name[3:])
-                params = self.txtParams.GetValue().strip().split()
-                self.datagrid.RefreshData(*func(*params))
+            if '::' in func_name:
+                func_name = func_name.split('::')[1]
+                func = getattr(dbobj, func_name)
+                params = self.txtQuery.GetValue().strip().split()
+                fields, rows = func(*params)
             else:
-                query = self.txtQuery.GetValue()
-                self.datagrid.RefreshData(*db.getall(query))
-        except Exception as exp:
-            print(exp)
+                query = self.txtQuery.GetValue().strip()
+                fields, rows = dbobj.getall(query)
 
-    def OnBtnWms(self, event):
-        opts = ConnOpt(self.selDSN.GetValue(),
-                       self.txtUID.GetValue(),
-                       self.txtPWD.GetValue())
-        try:
-            wms = Seaquest.WMSSystem(opts, False)
-
-            func_name = self.selFuncs.GetValue()
-            if func_name.startswith('wms:'):
-                func = getattr(wms, func_name[4:])
-                params = self.txtParams.GetValue().strip().split()
-                self.datagrid.RefreshData(*func(*params))
-            else:
-                query = self.txtQuery.GetValue()
-                self.datagrid.RefreshData(*wms.getall(query))
-
+            self.datagrid.RefreshData(fields, rows)
         except Exception as exp:
             wx.MessageBox(str(exp), "Error", wx.OK)
 
-    def OnFuncClicked(self, event):
-        func_name = self.selFuncs.GetValue()
-        if func_name.startswith('db'):
-            self.btnRun.Enable()
-            self.btnWms.Disable()
-        elif func_name.startswith('wms'):
-            self.btnRun.Disable()
-            self.btnWms.Enable()
-        else:
-            self.btnRun.Enable()
-            self.btnWms.Enable()
-        pass
+        self.SetStatusText('Done')
+        self.statusbar.StopBusy()
+
+    def OnTry(self, event):
+        self.statusbar.StartBusy()
 
 class MainFrame(wx.MDIParentFrame):
     """ """

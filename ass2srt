@@ -22,7 +22,7 @@ with file(fname) as ass:
                           split(',', 2)
             print(count)
             print(st, '-->', et)
-            txt = re.sub(r'{\\fn.*}', '', txt)
+            txt = re.sub(r'{\\fn.*}', '\n', txt)
             print(txt)
             print()
             count += 1

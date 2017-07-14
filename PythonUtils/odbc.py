@@ -3,37 +3,44 @@ import pyodbc
 
 
 def get_connection(options):
-    connstr = ';'.join(['Dsn=%s' % options.dsn,
-                        'Uid=%s' % options.user,
-                        'Pwd=%s' % options.password,
-                        'App=%s' % 'Metric Miner',
-                        'Retrycount=3',
-                        'Retrytime=5000',
-                        ])
-
-    conn = pyodbc.connect(connstr)
-
-    return conn
+    return ODBCConnection(options)
 
 
-def get_tables(cursor, catalog, schema=None, table=None):
-    params = {'catalog': catalog,
-              'tableType': 'TABLE'}
-    if table:
-        params['table'] = table
-    if schema:
-        params['schema'] = schema
+class ODBCConnection(object):
+    def __init__(self, options):
+        connstr = ';'.join(['Dsn=%s' % options.dsn,
+                            'Uid=%s' % options.user,
+                            'Pwd=%s' % options.password,
+                            'App=%s' % 'Metric Miner',
+                            'Retrycount=3',
+                            'Retrytime=5000',
+                            ])
+        self.__conn = pyodbc.connect(connstr)
 
-    return cursor.tables(**params).fetchall()
+    def cursor(self):
+        return self.__conn.cursor()
+
+    def get_tables(self, catalog, schema=None, table=None):
+        cursor = self.cursor()
+        params = {'catalog': catalog,
+                  'tableType': 'TABLE'}
+        if table:
+            params['table'] = table
+        if schema:
+            params['schema'] = schema
+
+        return cursor.tables(**params).fetchall()
+
+    def get_columns(self, catalog, schema=None, table=None, column=None):
+        cursor = self.cursor()
+        params = {'catalog': catalog}
+        if table:
+            params['table'] = table
+        if schema:
+            params['schema'] = schema
+        if column:
+            params['column'] = schema
+
+        return cursor.columns(**params).fetchall()
 
 
-def get_columns(cursor, catalog, schema=None, table=None, column=None):
-    params = {'catalog': catalog}
-    if table:
-        params['table'] = table
-    if schema:
-        params['schema'] = schema
-    if column:
-        params['column'] = schema
-
-    return cursor.columns(**params).fetchall()
