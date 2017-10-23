@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+__all__ = ('get_diskinfo',
+           'get_mpathinfo',
+          )
+
+
+def get_diskinfo(disk):
+    pass
+
+
+def get_mpathinfo(mpath):
+    pass
+
+
+def main():
+    from optparse import OptionParser
+
+    parser = OptionParser()
+    for util in __all__:
+        parser.add_option('--' + util, action='store_true', default=False)
+
+    opts, args = parser.parse_args()
+ 
+    print opts
+    print args
+
+if __name__ == '__main__':
+   main()
