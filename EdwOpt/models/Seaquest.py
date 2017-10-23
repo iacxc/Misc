@@ -7,7 +7,7 @@ from __future__ import print_function
 import csv
 
 from Common import make_enum
-import sqlstmt
+from models import sqlstmt
 
 
 DATATYPE = make_enum('DATATYPE',
@@ -125,27 +125,25 @@ class Catalog(object):
         return '<Catalog %s>' % self.name
 
 
-class Database(object):
+class DBObj(object):
     def __init__(self, connection, debug=True):
         self.__conn = connection
-
         self.__debug = debug
-        self.__catalogs = []
 
     @property
-    def catalogs(self):
-        return self.__catalogs
-
-
-    def add_catalog(self, catalog):
-        self.__catalogs.append(catalog)
+    def connection(self):
+        return self.__conn
 
     def log_debug(self, msg):
+        """ log debug """
         if __debug__ and self.__debug:
-                print(msg)
+            print(msg)
+
+    def cursor(self):
+        return self.__conn.cursor()
 
     def runsql(self, sqlstr, *params):
-        cursor = self.__conn.cursor()
+        cursor = self.cursor()
         cursor.execute(sqlstr, *params)
 
         return cursor
@@ -163,19 +161,58 @@ class Database(object):
         return ([desc[0] for desc in cursor.description],
                 cursor.fetchall())
 
+
+class Database(DBObj):
+    def __init__(self, connection, debug=True):
+        super(Database, self).__init__(connection, debug)
+
+        self.__catalogs = []
+
+    @property
+    def catalogs(self):
+        return self.__catalogs
+
+    def add_catalog(self, catalog):
+        self.__catalogs.append(catalog)
+
+    def get_all_catalogs(self):
+        return self.getall(sqlstmt.get_all_catalogs())
+
+    def get_all_schemas(self):
+        return self.getall(sqlstmt.get_all_schemas())
+
+    def get_schemas(self, catalog):
+        return self.getall(sqlstmt.get_schemas(catalog))
+
+    def get_tables(self, catalog):
+        return self.getall(sqlstmt.get_tables(catalog))
+
+    def get_table_files(self, catalog, schema=None, table=None):
+        return self.getall(sqlstmt.get_table_files(catalog, schema, table))
+
+    def get_table_partitions(self, *params):
+        """ get partitions for a table """
+        return self.getall(sqlstmt.get_table_partitions(*params))
+
+    def get_single_partition_objs(self, catalog):
+        return self.getall(sqlstmt.get_single_partition_objs(catalog))
+
+    def get_table_columns(self, catalog, table):
+        return self.getall(sqlstmt.get_cols(catalog, table))
+
     def _fill_struct(self):
         if len(self.catalogs) > 0:   # prevent doing it twice
             return
 
         # first get all catalogs and schemas
-        fields, rows = self.getall(sqlstmt.get_all_catalogs())
+        fields, rows = self.get_all_catalogs()
         for row in rows:
             catname = row[0]
             cat = Catalog(catname)
 
             # get all tables for catalog
             cursch = None
-            for r in self.__conn.get_tables(catname):
+            for r in self.connection.get_tables(catname):
                 schname = r[1]
                 tablename = r[2]
                 if cursch is None or cursch.name != schname:
@@ -206,7 +243,7 @@ class Database(object):
         self.log_debug('%s.%s.%s' % (catalog, schema, table))
         ddl = ["CREATE TABLE %s(" % table]
         firstfield = True
-        for row in self.__conn.get_columns(catalog, schema, table):
+        for row in self.connection.get_columns(catalog, schema, table):
             if firstfield:
                 ddl.append("    %s %s" % (row[3].strip(), ft_text(row[4])))
                 firstfield = False
@@ -222,6 +259,7 @@ class Database(object):
             return "\n".join(ddl)
 
     def dumpdata(self, table=None, sql=None, *params):
+        """ dump data to file"""
         if table is None and sql is None:
             return
 
@@ -251,17 +289,6 @@ class Database(object):
             for row in cursor.fetchall():
                 writer.writerow(row)
 
-    def get_table_files(self, catalog, schema=None, table=None):
-        return self.getall(sqlstmt.get_table_files(catalog, schema, table))
-
-    def get_table_partitions(self, *params):
-        """ get partitions for a table """
-        return self.getall(sqlstmt.get_table_partitions(*params))
-
-    def get_single_partition_objs(self, catalog):
-        return self.getall(sqlstmt.get_single_partition_objs(catalog))
-
-
 WMSCOMMAND = make_enum('WMSCOMMAND',
                        OPENWMS='WMSOPEN',
                        STATUS_WMS='STATUS WMS',
@@ -272,33 +299,20 @@ WMSCOMMAND = make_enum('WMSCOMMAND',
                        )
 
 
-class WMSSystem(object):
+class WMSSystem(DBObj):
     """ WMS System """
     def __init__(self, connection, debug=True):
-        """ init """
-        self.__conn = connection
+        super(WMSSystem, self).__init__(connection, debug)
 
-    def runsql(self, sqlstr, *params):
-        cursor = self.__conn.cursor()
+    def cursor(self):
+        cursor = super(WMSSystem, self).cursor()
         cursor.execute(WMSCOMMAND.OPENWMS)
-        cursor.execute(sqlstr, *params)
 
         return cursor
 
-    def getone(self, sqlstr, *params):
-        """ execute a query, return the first row """
-        cursor = self.runsql(sqlstr, *params)
-
-        return ([desc[0] for desc in cursor.description],
-                cursor.fetchone())
-
-    def getall(self, sqlstr, *params):
-        cursor = self.runsql(sqlstr, *params)
-
-        return ([desc[0] for desc in cursor.description],
-                cursor.fetchall())
-
-    def status(self, *args):
+    #
+    # WMS commands
+    def status(self):
         """ get the status of wms system """
         return self.getall(WMSCOMMAND.STATUS_WMS)
 

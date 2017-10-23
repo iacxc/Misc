@@ -60,15 +60,20 @@ class DataGrid(wx.grid.Grid):
         if row_number > 0:
             self.DeleteRows(0, row_number)
 
-        self.AppendCols(len(titles))
+        self.AppendCols(len(titles), False)
         for index, title in enumerate(titles):
             self.SetColLabelValue(index, title)
             self.AutoSizeColumn(index)
 
-        self.AppendRows(len(rows))
+        self.AppendRows(len(rows), False)
         for rindex, row in enumerate(rows):
             for cindex, value in enumerate(row):
-                self.SetCellValue(rindex, cindex, str(value))
+                try:
+                    self.SetCellValue(rindex, cindex, str(value))
+                except UnicodeEncodeError:
+                    self.SetCellValue(rindex, cindex, value)
+                    pass
+
                 self.AutoSizeColumn(cindex)
 
         self.EndBatch()

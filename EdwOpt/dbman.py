@@ -60,9 +60,14 @@ class DataThread(threading.Thread):
 class DataFrame(wx.MDIChildFrame):
     """ """
     func_list = ('raw query',
+                 'db::get_all_catalogs',
+                 'db::get_all_schemas',
+                 'db::get_schemas',
+                 'db::get_tables',
                  'db::get_table_partitions',
                  'db::get_table_files',
                  'db::get_single_partition_objs',
+                 'db::get_table_columns',
                  'wms::status',
                  'wms::status_query',
                  'wms::status_service',
@@ -82,6 +87,7 @@ class DataFrame(wx.MDIChildFrame):
         opt.dsn = self.selDSN.GetValue()
         opt.user = self.txtUID.GetValue()
         opt.password = self.txtPWD.GetValue()
+        opt.Application = "DM"
 
         return opt
 
@@ -97,17 +103,13 @@ class DataFrame(wx.MDIChildFrame):
 
     @property
     def database(self):
-        if self.connection is None:
-            return None
-        else:
-            return Seaquest.Database(self.connection, False)
+        return None if self.connection is None \
+           else Seaquest.Database(self.connection, False)
 
     @property
     def wms(self):
-        if self.connection is None:
-            return None
-        else:
-            return Seaquest.WMSSystem(self.connection, False)
+        return None if self.connection is None \
+            else Seaquest.WMSSystem(self.connection, False)
 
     def initUI(self):
         panel = wx.Panel(self)
@@ -193,10 +195,11 @@ class DataFrame(wx.MDIChildFrame):
         self.statusbar.StartBusy()
 
     def StopQuery(self, fields=None, rows=None):
-        self.UpdateStatus('Done')
+        self.UpdateStatus('Refreshing...')
         if fields is not None:
             self.datagrid.RefreshData(fields, rows)
         self.statusbar.StopBusy()
+        self.UpdateStatus('Done')
 
     def OnSelDsnClicked(self, event):
         self.__conn = None
