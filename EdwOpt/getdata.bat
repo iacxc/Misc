@@ -6,9 +6,9 @@ jython dumpData.py --classpath c:\caiche\lib\java\hpt4jdbc.jar ^
     --dsn ZEO_EDW ^
     --user cheng-xin.cai@hpe.com ^
     --password Iam@hpe.com ^
-    --table events ^
-    --action events ^
+    --table se_delta ^
+    --action se_delta ^
     --start "2016-11-01 00:00:00.000" ^
-    --end "2016-11-01 12:00:00.000" ^
+    --end "2016-11-02 00:00:00.000" ^
 
 

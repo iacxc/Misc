@@ -1,0 +1,100 @@
+#!/usr/bin/python -O
+
+__all__ = ('get_diskinfo',
+           'get_mpathinfo',
+          )
+
+import os.path
+import re
+
+from Common import run_cmd
+
+CMD_MULTIPATH = '/sbin/multipath'
+CMD_EGREP = '/bin/egrep'
+CMD_SGINQ = '/usr/bin/sg_inq'
+
+
+def get_diskinfo(disk):
+    wwn = get_disk_wwn(disk)
+    print "Diskname:", disk
+    print "mpath:", get_disk_mpath(disk)
+    print "wwn:", wwn
+    print "msa:", get_wwn_msa(wwn)
+
+
+def get_mpathinfo(mpath):
+    print "Multipath:", mpath
+    for disk in get_mpath_disks(mpath):
+        wwn = get_disk_wwn(disk)
+        print "    disk:", disk
+        print "    wwn:", wwn
+        print "    msa:", get_wwn_msa(wwn)
+        print
+
+
+def get_disk_mpath(disk):
+    status, cmdout = run_cmd("{multipath} -ll {disk} -v1".format(
+        multipath=CMD_MULTIPATH,
+        disk=disk
+    ))
+    return cmdout.strip()
+
+
+def get_mpath_disks(mpath):
+    status, cmdout = run_cmd(
+        "{multipath} -ll {mpath} | {egrep} 'sd[a-z]+'".format(
+            multipath=CMD_MULTIPATH,
+            mpath=mpath,
+            egrep=CMD_EGREP
+    ))
+    disks = []
+    for line in cmdout.split('\n'):
+        m = re.search(r"sd[a-z]+", line)
+        if m:
+            disks.append('/dev/' + m.group(0))
+    
+    return disks
+
+
+def get_disk_wwn(disk):
+    status, cmdout = run_cmd(
+        "{sg_inq} -p0x83 {disk} |{egrep} '\[0x[0-9a-f]{{16}}\]'".format(
+            sg_inq=CMD_SGINQ,
+            disk=disk,
+            egrep=CMD_EGREP
+        ))
+    m = re.search(r"[0-9a-f]{16}", cmdout)
+    if m:
+        return m.group(0)
+    else:
+        return "nowwn"
+
+
+def get_wwn_msa(wwn):
+    status, cmdout = run_cmd(
+        "{egrep} -l {wwn} /home/lunmgr/msa_xml/*.xml".format(
+            egrep=CMD_EGREP,
+            wwn=wwn
+        )
+    )
+    return os.path.basename(cmdout.strip()).replace(".xml", "")
+
+
+def main():
+    from optparse import OptionParser
+
+    parser = OptionParser()
+    for util in __all__:
+        parser.add_option('--' + util, action='store_true', default=False)
+
+    opts, args = parser.parse_args()
+ 
+    for funname in __all__:
+        if getattr(opts, funname):
+            fun = globals().get(funname)
+            if fun:
+                fun(*args)
+
+
+if __name__ == '__main__':
+   main()

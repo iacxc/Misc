@@ -9,6 +9,7 @@
 #
 # @@@ END COPYRIGHT @@@
 
+from __future__ import print_function
 
 __all__ = ( 'check_module',
             'run_cmd',
@@ -86,7 +87,7 @@ class Command(object):
             """ a closure which run the command"""
             try:
                 if __debug__ or test:
-                    print self.cmdstr
+                    print(self.cmdstr)
 
                 if test:
                     self.status, self.output = SUCCESS, ''
@@ -188,11 +189,11 @@ def time_it(title_, sub, *args, **kws):
     delta = end_t - start_t
 
     if __debug__:
-        print '{0} start at {1}, end at {2}'.format(
-               title_, format_time(start_t), format_time(end_t))
+        print('{0} start at {1}, end at {2}'.format(
+               title_, format_time(start_t), format_time(end_t)))
 
-        print '{0} elapsed: {1:.4f} seconds'.format(
-               title_, delta.seconds + 1e-6 * delta.microseconds)
+        print('{0} elapsed: {1:.4f} seconds'.format(
+               title_, delta.seconds + 1e-6 * delta.microseconds))
 
     return (delta, ret)
 

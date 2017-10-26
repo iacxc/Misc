@@ -11,9 +11,10 @@ class ODBCConnection(object):
         connstr = ';'.join(['Dsn=%s' % options.dsn,
                             'Uid=%s' % options.user,
                             'Pwd=%s' % options.password,
-                            'App=%s' % 'Metric Miner',
+                            'App=%s' % getattr(options, 'Application', 'HPDM'),
                             'Retrycount=3',
                             'Retrytime=5000',
+			    'charset=utf16',
                             ])
         self.__conn = pyodbc.connect(connstr)
 
