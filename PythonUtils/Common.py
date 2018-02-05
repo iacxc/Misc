@@ -23,12 +23,15 @@ __all__ = ( 'check_module',
             'lcm',
             'get_script_path',
             'get_hostid',
-            'md5sum')
+            'md5sum',
+	    'get_n_biggest',
+	  )
 
 
 import base64
 from datetime import datetime
 import hashlib
+import heapq
 import os
 import os.path
 import struct
@@ -279,3 +282,14 @@ def lcm(m, n, *args):
     l = m * n / g
 
     return l if len(args) == 0 else lcm(l, *args)
+
+
+def get_n_biggest(stream, n):
+    """ return the n biggest number in a large stream """
+    datalist = []
+    heapq.heapify(datalist)
+    for d in stream:
+        heapq.heappush(datalist, d)
+	datalist = heapq.nlargest(n, datalist)
+
+    return datalist
