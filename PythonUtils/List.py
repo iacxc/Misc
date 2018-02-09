@@ -75,7 +75,7 @@ class Cons(object):
 
 def List(*items):
     """ create a list """
-    if len(items) == 0:
+    if not items:
         return Nil()
     else:
         return Cons(items[0], List(*items[1:]))
