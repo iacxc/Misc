@@ -25,13 +25,14 @@ __all__ = ( 'check_module',
             'get_hostid',
             'md5sum',
             'get_n_biggest',
-	  )
+            'get_n_biggest2',
+           )
 
 
 import base64
+import bisect
 from datetime import datetime
 import hashlib
-import heapq
 import os
 import os.path
 import struct
@@ -287,9 +288,19 @@ def lcm(m, n, *args):
 def get_n_biggest(stream, n):
     """ return the n biggest number in a large stream """
     datalist = []
-    heapq.heapify(datalist)
     for d in stream:
-        heapq.heappush(datalist, d)
-	datalist = heapq.nlargest(n, datalist)
+        bisect.insort(datalist, d)
+        datalist = datalist[-n:]
 
     return datalist
+
+
+def get_n_biggest2(n):
+    """ return the n biggest number in a large stream, 
+        using a funny solution, 
+        the result is a coroutine, you can get the result at anytime by a send"""
+    datalist = []
+    while True:
+        d = yield datalist
+        bisect.insort(datalist, d)
+        datalist = datalist[-n:]
