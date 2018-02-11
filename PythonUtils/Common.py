@@ -290,7 +290,7 @@ def get_n_biggest(stream, n):
     datalist = []
     for d in stream:
         bisect.insort(datalist, d)
-        datalist = datalist[-n:]
+        datalist = datalist[-n:] # smallest data first
 
     return datalist
 
@@ -303,4 +303,4 @@ def get_n_biggest2(n):
     while True:
         d = yield datalist
         bisect.insort(datalist, d)
-        datalist = datalist[-n:]
+        datalist = datalist[-n:] # smallest data first

@@ -35,7 +35,7 @@ class Nil(object):
 class Cons(object):
     def __init__(self, head, tail=None):
         self.__head = head
-	if tail is None:
+    if tail is None:
             self.__tail = Nil()
         else:
             self.__tail = tail
