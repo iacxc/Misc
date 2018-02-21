@@ -178,30 +178,14 @@ def decode_int(s):
     return struct.unpack('i', data)[0]
 
 
-def time_it(title_, sub, *args, **kws):
-    """Calling a function and show the start time, end time
-       and elapsed time for running it"""
+def time_it(title_, func, *args, **kws):
+    """Calling a function,
+       return result and elapsed time
+    """
+    with Timer() as t:
+        ret = func(*args, **kws)
 
-    def format_time (time_):
-        """format a time value"""
-        return time_.strftime('%Y-%m-%d %H:%M:%S.%f')
-
-    start_t = datetime.now()
-
-    ret = sub(*args, **kws)
-
-    end_t = datetime.now()
-
-    delta = end_t - start_t
-
-    if __debug__:
-        print('{0} start at {1}, end at {2}'.format(
-               title_, format_time(start_t), format_time(end_t)))
-
-        print('{0} elapsed: {1:.4f} seconds'.format(
-               title_, delta.seconds + 1e-6 * delta.microseconds))
-
-    return (delta, ret)
+    return ret, t.elapsed
 
 
 def which(cmd):
@@ -255,7 +239,7 @@ def md5sum(fname):
 
         return m.hexdigest()
 
-    with file(fname, 'rb') as f:
+    with open(fname, 'rb') as f:
         return sumfile(f)
 
 
