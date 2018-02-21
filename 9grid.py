@@ -29,16 +29,16 @@ def samesquare(grid, idx):
 
 
 def color_digit(number):
-    formats = ('\033[1;30m%s\033[0m',        #0
-               '\033[1;31m%s\033[0m',        #1
-               '\033[1;32m%s\033[0m',        #2
-               '\033[1;33m%s\033[0m',        #3
-               '\033[1;34m%s\033[0m',        #4
-               '\033[1;35m%s\033[0m',        #5
-               '\033[1;36m%s\033[0m',        #6
-               '\033[1;37m%s\033[0m',        #7
-               '\033[1;37m%s\033[0m',        #8
-               '\033[1;37m%s\033[0m',        #9
+    formats = ('\033[01;30m%s\033[0m',        #0
+               '\033[01;31m%s\033[0m',        #1
+               '\033[01;32m%s\033[0m',        #2
+               '\033[01;33m%s\033[0m',        #3
+               '\033[01;34m%s\033[0m',        #4
+               '\033[01;35m%s\033[0m',        #5
+               '\033[01;36m%s\033[0m',        #6
+               '\033[01;37m%s\033[0m',        #7
+               '\033[01;37m%s\033[0m',        #8
+               '\033[01;37m%s\033[0m',        #9
     )
     return formats[number] % number
 
@@ -75,8 +75,9 @@ def solvegrid(grid, idx=0):
                    val in samesquare(grid, idx):
                     continue 
 
-                for g in solvegrid(grid[:idx] + (val,) + grid[idx+1:], idx+1):
-                    if g: yield g
+#                for g in solvegrid(grid[:idx] + (val,) + grid[idx+1:], idx+1):
+#                    if g: yield g
+                yield from solvegrid(grid[:idx] + (val,) + grid[idx+1:], idx+1)
 
         # if reach here, all choices has run out
         return

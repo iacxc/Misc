@@ -26,6 +26,7 @@ __all__ = ( 'check_module',
             'md5sum',
             'get_n_biggest',
             'get_n_biggest2',
+            'Timer',
            )
 
 
@@ -39,6 +40,7 @@ import struct
 from subprocess import Popen, PIPE
 import sys
 import threading
+import time
 
 
 #constants
@@ -304,3 +306,37 @@ def get_n_biggest2(n):
         d = yield datalist
         bisect.insort(datalist, d)
         datalist = datalist[-n:] # smallest data first
+
+
+class Timer:
+    def __init__(self, func=time.perf_counter):
+        self.elapsed = 0.0
+        self._func = func
+        self._start = None
+
+    def start(self):
+        if self._start is not None:
+            raise RuntimeError('Already started')
+        self._start = self._func()
+
+    def stop(self):
+        if self._start is None:
+            raise RuntimeError('Not started')
+        end = self._func()
+        self.elapsed += end - self._start
+        self._start = None
+
+    def reset(self):
+        self.elapsed = 0.0
+
+    @property
+    def is_running(self):
+        return self._start is not None
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop()
+
