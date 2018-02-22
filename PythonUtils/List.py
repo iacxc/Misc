@@ -28,14 +28,17 @@ class Nil(object):
     def nth(self, idx):
         raise RuntimeError("Empty list")
         
-    def __str__(self):
+    def __expr__(self):
         return "()"
+
+    def __str__(self):
+        return self.__expr__()
 
 
 class Cons(object):
     def __init__(self, head, tail=None):
         self.__head = head
-    if tail is None:
+        if tail is None:
             self.__tail = Nil()
         else:
             self.__tail = tail
@@ -68,6 +71,9 @@ class Cons(object):
             return self.head
         else:
             return self.tail.nth(idx-1)
+
+    def __expr__(self):
+        return "Cons({0}, {1})".format(self.head, self.tail.__expr__())
 
     def __str__(self):
         return "({0} {1})".format(self.head, self.tail)
@@ -132,6 +138,7 @@ def flatten(alist):
 if __name__ == "__main__":
     l1 = List(1, 2, List("hello", "world"), "a", "b", List(List('aa', 'bb')))
     print l1
+    print l1.__expr__()
     print flatten(l1)
     print 'Third item:', l1.nth(3)
     print reversed(l1)

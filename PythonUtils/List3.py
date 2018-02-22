@@ -42,7 +42,10 @@ class List(list):
 
     def __add__(self, list2):
         """ concat two lists """
-        return List(*self, *list2)
+        if self.is_empty:
+            return List(*list2)
+        else:
+            return cons(self.head, self.tail + list2)
 
     def flatten(self):
         """ return a flattened list """
@@ -74,6 +77,11 @@ if __name__ == "__main__":
     v = l2 + [4,5]
     print(type(v), v, v.reverse())
     print(l3 + l2)
+
+    l6 = List()
+    print("Empty list:", l6)
+    v = l6 + [4,5]
+    print(type(v), v)
 
     l1 = List(1, 2, List("hello", "world"), "a", "b", List(List('aa', 'bb')))
     print(l1)
