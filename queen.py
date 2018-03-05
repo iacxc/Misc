@@ -25,8 +25,7 @@ def find_queen(start_row, pos):
 
         if good_pos:
             pos[start_row] = col
-            for p in find_queen(start_row+1, pos):
-                yield p
+            yield from  find_queen(start_row+1, pos)
 
 
 if __name__ == '__main__':
