@@ -6,10 +6,12 @@ import sys
 
 
 def print_queen(pos):
+    line_splitter = '+' + '+'.join(['---'] * len(pos)) + '+'
     for col in pos:
-        print("| " * col + "|X|" + " |" * (len(pos)-col-1))
+        print(line_splitter)
+        print('|   ' * col + '| X |' + '   |' * (len(pos)-col-1))
 
-    print()
+    print(line_splitter)
 
 
 def find_queen(start_row, pos):
@@ -33,6 +35,7 @@ if __name__ == '__main__':
         queen_num = int(sys.argv[1])
         if queen_num < 4:
             print("Number of edges cannot less than 4")
+            sys.exit(1)
    
     queen_pos = [-1] * queen_num
     for pos in find_queen(0, queen_pos):
