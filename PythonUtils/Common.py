@@ -27,6 +27,7 @@ __all__ = ( 'check_module',
             'get_n_biggest',
             'get_n_biggest2',
             'Timer',
+            'InputStream'
            )
 
 
@@ -254,7 +255,7 @@ def get_script_path():
 
 def gcd(m, n, *args):
     """ get the greatest common divisor """
-    if m < n: 
+    if m < n:
         return gcd(n, m, *args)
 
     while m % n != 0:
@@ -282,8 +283,8 @@ def get_n_biggest(stream, n):
 
 
 def get_n_biggest2(n):
-    """ return the n biggest number in a large stream, 
-        using a funny solution, 
+    """ return the n biggest number in a large stream,
+        using a funny solution,
         the result is a coroutine, you can get the result at anytime by a send"""
     datalist = []
     while True:
@@ -324,3 +325,77 @@ class Timer:
     def __exit__(self, *args):
         self.stop()
 
+
+class FileStream(object):
+    def __init__(self, fname, mode, hooksize, hooker):
+        self.fname = fname
+        self.mode = mode
+        self.hooksize = hooksize
+        self.hooker = hooker
+
+def nope(*args):
+    pass
+
+
+class InputStream(FileStream):
+    def __init__(self, fname, mode='r', hooksize=10000, hooker=nope):
+        if 'w' in mode or 'x' in mode:
+            raise RuntimeError('Cannot write to an input stream')
+        super().__init__(fname, mode, hooksize, hooker)
+
+    def linereader(self):
+        hooksize = self.hooksize
+        hooker = self.hooker
+        with open(self.fname, self.mode) as fd:
+            for lineno, line in enumerate(fd, start=1):
+                if lineno % hooksize == 0:
+                    hooker(lineno)
+
+                yield lineno, line
+
+    def blockreader(self, blocksize=8172):
+        hooksize = self.hooksize
+        hooker = self.hooker
+        with open(self.fname, self.mode) as fd:
+            blockno = 0
+            while 1:
+                block = fd.read(blocksize)
+                if block:
+                    blockno += 1
+                    yield blockno, block
+
+                    if blockno % hooksize == 0:
+                        hooker(blockno)
+                else:
+                    break
+
+
+def coroutine(func):
+    def start(*args, **kwargs):
+        cr = func(*args, **kwargs)
+        next(cr)
+        return cr
+    return start
+
+
+class OutputStream(FileStream):
+    def __init__(self, fname, mode='w', hooksize=10000, hooker=nope):
+        if 'r' in mode:
+            raise RuntimeError('Cannot read from an output stream')
+        super().__init__(fname, mode, hooksize, hooker)
+
+    @coroutine
+    def linewriter(self):
+        lineno = 1
+        hooksize = self.hooksize
+        hooker = self.hooker
+        with open(self.fname, self.mode) as fd:
+            try:
+                while 1:
+                    line = (yield)
+                    fd.write(line + '\n')
+                    lineno += 1
+                    if lineno % hooksize == 0:
+                        hooker(lineno)
+            except GeneratorExit:
+                pass
