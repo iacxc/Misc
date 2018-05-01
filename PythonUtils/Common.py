@@ -382,16 +382,16 @@ class OutputStream(FileStream):
         super().__init__(fname, mode, hooksize, hooker)
 
     @coroutine
-    def linewriter(self):
-        lineno = 1
+    def writer(self):
+        recno = 1
         with open(self.fname, self.mode) as fd:
             try:
                 while 1:
                     line = (yield)
-                    fd.write(line + '\n')
-                    lineno += 1
-                    if lineno % self.hooksize == 0:
-                        self.hooker(lineno)
+                    fd.write(line)
+                    recno += 1
+                    if recno % self.hooksize == 0:
+                        self.hooker(recno)
             except GeneratorExit:
                 pass
 
