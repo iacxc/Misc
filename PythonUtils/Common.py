@@ -338,33 +338,26 @@ def nope(*args):
     pass
 
 
-class InputStream(FileStream):
-    def __init__(self, fname, mode='r', hooksize=10000, hooker=nope):
-        if 'w' in mode or 'x' in mode:
-            raise RuntimeError('Cannot write to an input stream')
-        super().__init__(fname, mode, hooksize, hooker)
+def line_reader(fname, mode='r', hooksize=10000, hooker=nope):
+    with open(fname, mode) as fd:
+        for lineno, line in enumerate(fd, start=1):
+            yield lineno, line
+            if lineno % hooksize == 0: hooker(lineno)
 
-    def linereader(self):
-        with open(self.fname, self.mode) as fd:
-            for lineno, line in enumerate(fd, start=1):
-                if lineno % self.hooksize == 0:
-                    self.hooker(lineno)
 
-                yield lineno, line
+def block_reader(fname, mode='r', blocksize=8172,
+                hooksize=10000, hooker=nope):
+    with open(fname, mode) as fd:
+        blockno = 1
+        while 1:
+            block = fd.read(blocksize)
+            if block:
+                yield blockno, block
+                if blockno % hooksize == 0: hooker(blockno)
 
-    def blockreader(self, blocksize=8172):
-        with open(self.fname, self.mode) as fd:
-            blockno = 0
-            while 1:
-                block = fd.read(blocksize)
-                if block:
-                    blockno += 1
-                    yield blockno, block
-
-                    if blockno % self.hooksize == 0:
-                        self.hooker(blockno)
-                else:
-                    break
+                blockno += 1
+            else:
+                break
 
 
 def coroutine(func):
@@ -375,37 +368,30 @@ def coroutine(func):
     return start
 
 
-class OutputStream(FileStream):
-    def __init__(self, fname, mode='w', hooksize=10000, hooker=nope):
-        if 'r' in mode:
-            raise RuntimeError('Cannot read from an output stream')
-        super().__init__(fname, mode, hooksize, hooker)
+@coroutine
+def file_writer(fname, mode='w', hooksize=10000, hooker=nope):
+    recno = 1
+    with open(fname, mode) as fd:
+        try:
+            while 1:
+                fd.write((yield))
+                recno += 1
+                if recno % hooksize == 0:
+                    hooker(recno)
+        except GeneratorExit:
+            pass
 
-    @coroutine
-    def writer(self):
-        recno = 1
-        with open(self.fname, self.mode) as fd:
-            try:
-                while 1:
-                    line = (yield)
-                    fd.write(line)
-                    recno += 1
-                    if recno % self.hooksize == 0:
-                        self.hooker(recno)
-            except GeneratorExit:
-                pass
 
-    @coroutine
-    def csvwriter(self):
-        rowno = 1
-        with open(self.fname, self.mode) as fd:
-            writer = csv.writer(fd)
-            try:
-                while 1:
-                    row = yield
-                    writer.writerow(row)
-                    rowno += 1
-                    if rowno % self.hooksize == 0:
-                        self.hooker(rowno)
-            except GeneratorExit:
-                pass
+@coroutine
+def csv_writer(fname, mode='w', hooksize=10000, hooker=nope):
+    rowno = 1
+    with open(fname, mode) as fd:
+        writer = csv.writer(fd)
+        try:
+            while 1:
+                writer.writerow((yield))
+                rowno += 1
+                if rowno % hooksize == 0:
+                    hooker(rowno)
+        except GeneratorExit:
+            pass
