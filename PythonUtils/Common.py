@@ -33,6 +33,7 @@ __all__ = ( 'check_module',
 
 import base64
 import bisect
+import csv
 from datetime import datetime
 import hashlib
 import os
@@ -344,18 +345,14 @@ class InputStream(FileStream):
         super().__init__(fname, mode, hooksize, hooker)
 
     def linereader(self):
-        hooksize = self.hooksize
-        hooker = self.hooker
         with open(self.fname, self.mode) as fd:
             for lineno, line in enumerate(fd, start=1):
-                if lineno % hooksize == 0:
-                    hooker(lineno)
+                if lineno % self.hooksize == 0:
+                    self.hooker(lineno)
 
                 yield lineno, line
 
     def blockreader(self, blocksize=8172):
-        hooksize = self.hooksize
-        hooker = self.hooker
         with open(self.fname, self.mode) as fd:
             blockno = 0
             while 1:
@@ -364,8 +361,8 @@ class InputStream(FileStream):
                     blockno += 1
                     yield blockno, block
 
-                    if blockno % hooksize == 0:
-                        hooker(blockno)
+                    if blockno % self.hooksize == 0:
+                        self.hooker(blockno)
                 else:
                     break
 
@@ -387,15 +384,28 @@ class OutputStream(FileStream):
     @coroutine
     def linewriter(self):
         lineno = 1
-        hooksize = self.hooksize
-        hooker = self.hooker
         with open(self.fname, self.mode) as fd:
             try:
                 while 1:
                     line = (yield)
                     fd.write(line + '\n')
                     lineno += 1
-                    if lineno % hooksize == 0:
-                        hooker(lineno)
+                    if lineno % self.hooksize == 0:
+                        self.hooker(lineno)
+            except GeneratorExit:
+                pass
+
+    @coroutine
+    def csvwriter(self):
+        rowno = 1
+        with open(self.fname, self.mode) as fd:
+            writer = csv.writer(fd)
+            try:
+                while 1:
+                    row = yield
+                    writer.writerow(row)
+                    rowno += 1
+                    if rowno % self.hooksize == 0:
+                        self.hooker(rowno)
             except GeneratorExit:
                 pass
