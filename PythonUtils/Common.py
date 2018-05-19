@@ -295,7 +295,7 @@ def get_n_biggest2(n):
 
 
 class Timer:
-    def __init__(self, func=time.perf_counter):
+    def __init__(self, func=time.time):
         self.elapsed = 0.0
         self._func = func
         self._start = None
@@ -395,3 +395,18 @@ def csv_writer(fname, mode='w', hooksize=10000, hooker=nope):
                     hooker(rowno)
         except GeneratorExit:
             pass
+
+
+def follow(thefile, target=None):
+    # a generator or a source to oroutine which simulate the tail -f function
+    thefile.seek(0, 2)
+    while True:
+        line = thefile.readline()
+        if not line:
+            time.sleep(0.1)
+            continue
+
+        if target:
+            target.send(line)
+        else:
+            yield line
