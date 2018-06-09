@@ -3,54 +3,40 @@
 from __future__ import print_function
 
 
+import argparse
+from functools import partial
 import multiprocessing
-import os.path
 import sys
 
 
-if __name__ == '__main__':
-    from optparse import OptionParser
+parser = argparse.ArgumentParser()
+parser.add_argument('-host', action='append',
+                    help='remote hosts to run job')
+parser.add_argument('command', help='command to run')
 
-    parser = OptionParser()
-    parser.add_option('--host', action='append',
-                      help='remote hosts to run job')
+args = parser.parse_args()
 
-    opts, args = parser.parse_args()
+if args.host is None:
+    print('Empty host list')
+    sys.exit(1)
 
-    if opts.host is None:
-        print('Empty host list')
-        sys.exit(1)
+if args.command is None:
+    print('Empty command')
+    sys.exit(2)
 
-    hosts = ','.join(opts.host).split(',')
+hosts = ','.join(args.host).split(',')
 
-    if len(args) != 1:
-        print('Only one command/script is allowed')
-        sys.exit(2)
+def run_cmd(host, cmd):
+    print(host)
+    os.system(f'rsh {host} "{cmd}"')
 
-    script = args[0]
+pool_size = multiprocessing.cpu_count() * 2
 
-    if os.path.isfile(script):
-        os.system('chmod +x %s' % script)
+pool = multiprocessing.Pool(processes=pool_size)
+pool.map(partial(run_cmd, cmd=args.command), hosts)
 
-        def command(host):
-            print(host)
-            os.system('scp %(script)s %(host)s:/root' % {
-                'host': host, 'script': script})
-            os.system('ssh %(host)s /root/%(script)s' % {
-                'host': host, 'script': script})
-    else:
-        def command(host):
-            print(host)
-            os.system('ssh %(host)s "%(script)s"' % {
-                'host': host, 'script': script})
-
-    pool_size = multiprocessing.cpu_count() * 2
-
-    pool = multiprocessing.Pool(processes=pool_size)
-    pool.map(command, hosts)
-
-    pool.close()
-    pool.join()
+pool.close()
+pool.join()
 
 
 
